@@ -26,11 +26,7 @@ fn init() -> Result<()> {
     let config = Config::default();
     config.save()?;
 
-    println!(
-        "{} {}",
-        "✔ Config created at".green(),
-        Config::path()?.display()
-    );
+    println!("{} {}", "✔ Config created at".green(), Config::path()?.display());
 
     Ok(())
 }

@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use owo_colors::OwoColorize;
 
 use crate::{
@@ -41,11 +41,7 @@ fn open(args: OpenArgs) -> Result<()> {
 
             launcher::launch(ide, &candidate)?;
 
-            println!(
-                "{} {}",
-                "Opened".green(),
-                candidate.display()
-            );
+            println!("{} {}", "Opened".green(), candidate.display());
 
             return Ok(());
         }

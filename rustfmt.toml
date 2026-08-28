@@ -1,0 +1,6 @@
+edition = "2024"
+max_width = 100
+newline_style = "Native"
+use_small_heuristics = "Max"
+hard_tabs = false
+tab_spaces = 4

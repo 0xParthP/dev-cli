@@ -1,7 +1,8 @@
+use std::{fs, path::PathBuf};
+
 use anyhow::{Context, Result};
 use directories::{BaseDirs, ProjectDirs};
 use serde::{Deserialize, Serialize};
-use std::{fs, path::PathBuf};
 
 use crate::models::ide::Ide;
 
@@ -13,22 +14,16 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        let home = BaseDirs::new()
-            .expect("Couldn't find home directory")
-            .home_dir()
-            .to_path_buf();
+        let home = BaseDirs::new().expect("Couldn't find home directory").home_dir().to_path_buf();
 
-        Self {
-            projects_root: vec![home.join("Projects")],
-            default_ide: Ide::Vscode,
-        }
+        Self { projects_root: vec![home.join("Projects")], default_ide: Ide::Vscode }
     }
 }
 
 impl Config {
     pub fn path() -> Result<PathBuf> {
-        let proj = ProjectDirs::from("", "", "dev-cli")
-            .context("Couldn't locate config directory")?;
+        let proj =
+            ProjectDirs::from("", "", "dev-cli").context("Couldn't locate config directory")?;
 
         Ok(proj.config_dir().join("config.toml"))
     }

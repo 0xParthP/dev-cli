@@ -1,20 +1,17 @@
 mod cli;
 mod commands;
 mod config;
-mod installer;
-mod scanner;
 mod ide;
+mod installer;
 mod models;
+mod scanner;
 
 use anyhow::Result;
 use clap::Parser;
 use cli::{Cli, Commands};
 
 fn main() -> Result<()> {
-    tracing_subscriber::fmt()
-        .with_target(false)
-        .without_time()
-        .init();
+    tracing_subscriber::fmt().with_target(false).without_time().init();
 
     let cli = Cli::parse();
 

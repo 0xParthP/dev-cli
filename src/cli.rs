@@ -51,9 +51,7 @@ pub enum ConfigSubcommand {
 
     Show,
 
-    SetDefaultIde {
-        ide: Ide,
-    },
+    SetDefaultIde { ide: Ide },
 }
 
 #[derive(Args)]

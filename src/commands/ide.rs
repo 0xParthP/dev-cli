@@ -23,11 +23,7 @@ fn list() -> Result<()> {
     }
 
     for ide in ides {
-        println!(
-            "{} {}",
-            "✓".green(),
-            ide.display_name
-        );
+        println!("{} {}", "✓".green(), ide.display_name);
         println!("    {}", ide.executable.display());
     }
 

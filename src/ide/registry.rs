@@ -10,15 +10,7 @@ pub struct InstalledIde {
 }
 
 impl InstalledIde {
-    pub fn new(
-        ide: Ide,
-        name: &str,
-        exe: PathBuf,
-    ) -> Self {
-        Self {
-            ide,
-            display_name: name.into(),
-            executable: exe,
-        }
+    pub fn new(ide: Ide, name: &str, exe: PathBuf) -> Self {
+        Self { ide, display_name: name.into(), executable: exe }
     }
 }

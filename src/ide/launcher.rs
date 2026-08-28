@@ -1,20 +1,13 @@
-use anyhow::{bail, Context, Result};
 use std::{path::Path, process::Command};
 
-use crate::{
-    ide::detect::detect_ides,
-    models::ide::Ide,
-};
+use anyhow::{Context, Result, bail};
 
-pub fn launch(
-    ide: Ide,
-    project: &Path,
-) -> Result<()> {
+use crate::{ide::detect::detect_ides, models::ide::Ide};
+
+pub fn launch(ide: Ide, project: &Path) -> Result<()> {
     let installed = detect_ides();
 
-    let launcher = installed
-        .iter()
-        .find(|i| i.ide == ide);
+    let launcher = installed.iter().find(|i| i.ide == ide);
 
     let Some(launcher) = launcher else {
         bail!("{:?} is not installed.", ide);
