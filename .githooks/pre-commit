@@ -1,5 +1,16 @@
 #!/usr/bin/env bash
+set -e
 
-cargo fmt --all
+echo "🦀 Running rustfmt..."
+cargo fmt
+
+# Re-stage any files modified by rustfmt
+git add -A
+
+echo "🔍 Running clippy..."
 cargo clippy --all-targets --all-features -- -D warnings
+
+echo "🧪 Running tests..."
 cargo test
+
+echo "✅ Pre-commit checks passed."
