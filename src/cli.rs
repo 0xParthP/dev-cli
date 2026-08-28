@@ -103,9 +103,9 @@ pub enum ConfigSubcommand {
     Show,
 
     /// Set the default IDE to use when opening projects.
-    SetDefaultIde { 
+    SetDefaultIde {
         /// The IDE to set as default.
-        ide: Ide 
+        ide: Ide,
     },
 }
 

@@ -17,7 +17,7 @@
 
 use std::{path::Path, process::Command};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 use crate::{ide::detect::detect_ides, models::ide::Ide};
 

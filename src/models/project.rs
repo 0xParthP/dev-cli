@@ -24,13 +24,13 @@ use serde::{Deserialize, Serialize};
 pub struct Project {
     /// Project name (typically directory name).
     pub name: String,
-    
+
     /// Full path to project directory.
     pub path: PathBuf,
 
     /// Primary programming language (Sprint 2+).
     pub language: Option<String>,
-    
+
     /// Used framework or tool (Sprint 2+).
     pub framework: Option<String>,
 

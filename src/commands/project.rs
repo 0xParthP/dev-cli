@@ -2,7 +2,7 @@
 //!
 //! Implements `dev project` subcommands for listing and opening projects.
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use owo_colors::OwoColorize;
 
 use crate::{

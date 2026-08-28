@@ -72,15 +72,9 @@ impl Default for Config {
     ///
     /// Panics if home directory cannot be determined.
     fn default() -> Self {
-        let home = BaseDirs::new()
-            .expect("Couldn't find home directory")
-            .home_dir()
-            .to_path_buf();
+        let home = BaseDirs::new().expect("Couldn't find home directory").home_dir().to_path_buf();
 
-        Self {
-            projects_root: vec![home.join("Projects")],
-            default_ide: Ide::Vscode,
-        }
+        Self { projects_root: vec![home.join("Projects")], default_ide: Ide::Vscode }
     }
 }
 
@@ -96,8 +90,8 @@ impl Config {
     ///
     /// Returns error if platform directories cannot be located.
     pub fn path() -> Result<PathBuf> {
-        let proj = ProjectDirs::from("", "", "dev-cli")
-            .context("Couldn't locate config directory")?;
+        let proj =
+            ProjectDirs::from("", "", "dev-cli").context("Couldn't locate config directory")?;
 
         Ok(proj.config_dir().join("config.toml"))
     }

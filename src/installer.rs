@@ -37,10 +37,7 @@ use crate::config::Config;
 pub fn install() -> Result<()> {
     let exe = env::current_exe()?;
 
-    let home = BaseDirs::new()
-        .unwrap()
-        .home_dir()
-        .to_path_buf();
+    let home = BaseDirs::new().unwrap().home_dir().to_path_buf();
 
     let bin = home.join(".local/bin");
 
@@ -48,8 +45,7 @@ pub fn install() -> Result<()> {
 
     let destination = bin.join("dev.exe");
 
-    fs::copy(&exe, &destination)
-        .context("Couldn't copy executable")?;
+    fs::copy(&exe, &destination).context("Couldn't copy executable")?;
 
     Config::load()?;
 

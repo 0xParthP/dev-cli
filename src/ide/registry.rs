@@ -47,10 +47,6 @@ impl InstalledIde {
     /// assert_eq!(ide.display_name, "Cursor");
     /// ```
     pub fn new(ide: Ide, name: &str, exe: PathBuf) -> Self {
-        Self {
-            ide,
-            display_name: name.into(),
-            executable: exe,
-        }
+        Self { ide, display_name: name.into(), executable: exe }
     }
 }
