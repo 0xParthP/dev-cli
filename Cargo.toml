@@ -1,0 +1,23 @@
+[package]
+name = "dev-cli"
+version = "0.1.0"
+edition = "2024"
+authors = ["Parth Prajapati"]
+description = "A modern Git project manager for developers."
+
+[[bin]]
+name = "dev"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4.5", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.9"
+directories = "6"
+ignore = "0.4"
+owo-colors = "4"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+which = "8"
+regex = "1"
