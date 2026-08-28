@@ -1,3 +1,7 @@
+//! IDE management command implementation.
+//!
+//! Implements `dev ide` subcommands for listing and managing IDEs.
+
 use anyhow::Result;
 use owo_colors::OwoColorize;
 
@@ -6,12 +10,28 @@ use crate::{
     ide::detect::detect_ides,
 };
 
+/// Execute an IDE command.
+///
+/// Dispatches to appropriate subcommand handler:
+/// - `list` — List detected IDEs
+///
+/// # Errors
+///
+/// Returns error if any command operation fails.
 pub fn execute(cmd: IdeCommand) -> Result<()> {
     match cmd.command {
         IdeSubcommand::List => list(),
     }
 }
 
+/// List all detected IDEs on the system.
+///
+/// Runs the IDE detection algorithm and displays results.
+/// Shows IDE name and executable path for each detected IDE.
+///
+/// # Errors
+///
+/// Returns error if IDE detection fails.
 fn list() -> Result<()> {
     println!("{}", "Installed IDEs".bold());
 
