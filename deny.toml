@@ -6,7 +6,12 @@ all-features = true
 
 [advisories]
 vulnerability = "deny"
-unmaintained = "warn"
+
+# Check unmaintained crates in the whole dependency graph,
+# but don't fail CI because of them.
+unmaintained = "all"
+
+# Warn about yanked crates.
 yanked = "warn"
 
 [licenses]
