@@ -2,9 +2,8 @@
 //!
 //! Defines the [`Project`] struct representing a discovered Git repository.
 
-use std::path::PathBuf;
-
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 /// A Git repository discovered by dev-cli.
 ///
@@ -19,23 +18,31 @@ use serde::{Deserialize, Serialize};
 /// - `framework` — Used framework (optional, future use)
 /// - `branch` — Current Git branch (optional, future use)
 /// - `dirty` — Whether working directory has uncommitted changes (future use)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Project {
-    /// Project name (typically directory name).
+    /// Human-readable repository name.
+    ///
+    /// Usually the final directory name.
     pub name: String,
 
-    /// Full path to project directory.
+    /// Absolute path to the repository root.
     pub path: PathBuf,
 
-    /// Primary programming language (Sprint 2+).
-    pub language: Option<String>,
+    /// Which configured project root this repository belongs to.
+    pub root: PathBuf,
 
-    /// Used framework or tool (Sprint 2+).
-    pub framework: Option<String>,
+    /// Path to the `.git` directory.
+    pub git_dir: PathBuf,
+}
 
-    /// Current Git branch (Sprint 3+).
-    pub branch: Option<String>,
+impl Project {
+    /// Construct a project from discovered filesystem paths.
+    pub fn new(path: PathBuf, root: PathBuf) -> Self {
+        let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
 
-    /// Whether working directory has uncommitted changes (Sprint 3+).
-    pub dirty: bool,
+        let git_dir = path.join(".git");
+
+        Self { name, path, root, git_dir }
+    }
 }

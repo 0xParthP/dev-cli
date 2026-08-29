@@ -1,9 +1,33 @@
+# Cargo aliases for the dev-cli development workflow.
+#
+# Usage:
+#   cargo ci                # Run all quality checks.
+#   cargo lint              # Run Clippy with warnings denied.
+#   cargo fmt-check         # Check formatting only.
+#   cargo coverage          # Generate and open HTML coverage report.
+#   cargo coverage-summary  # Print terminal coverage summary.
+#   cargo coverage-lcov     # Generate lcov.info for CI.
+#   cargo security          # Run deny check
+
 [alias]
-lint = "clippy --all-targets --all-features -- -D warnings"
+
+# ---------- Formatting ----------
 fmt-check = "fmt --all -- --check"
 
+# ---------- Linting ----------
+lint = "clippy --workspace --all-targets --all-features -- -D warnings"
+
+# ---------- Testing ----------
+test-all = "nextest run --workspace --all-features"
+
+# ---------- Coverage ----------
 coverage = "llvm-cov --workspace --all-features --html --open"
 coverage-summary = "llvm-cov --workspace --all-features --summary-only"
 coverage-lcov = "llvm-cov --workspace --all-features --lcov --output-path lcov.info"
 coverage-clean = "llvm-cov clean --workspace"
-ci = "llvm-cov --workspace --all-features --summary-only"
+
+# ---------- Security ----------
+security = "deny check"
+
+# ---------- XTask -------------
+xtask = "run --package xtask --"

@@ -5,6 +5,10 @@
 ![Rust](https://img.shields.io/badge/language-Rust-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Status](https://img.shields.io/badge/status-Active%20Development-blue)
+[![CI](https://github.com/0xParthP/dev-cli/actions/workflows/ci.yml/badge.svg)](...)
+[![Coverage](https://github.com/0xParthP/dev-cli/actions/workflows/coverage.yml/badge.svg)](...)
+[![Security](https://github.com/0xParthP/dev-cli/actions/workflows/security.yml/badge.svg)](...)
+[![Release](https://github.com/0xParthP/dev-cli/actions/workflows/release.yml/badge.svg)](...)
 
 **A modern developer project manager written in Rust**
 

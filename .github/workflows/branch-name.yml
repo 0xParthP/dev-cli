@@ -17,17 +17,24 @@ jobs:
     steps:
       - name: Check branch name
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BRANCH="${{ github.head_ref }}"
-          else
-            BRANCH="${GITHUB_REF#refs/heads/}"
-          fi
+          BRANCH="${{ github.head_ref || github.ref_name }}"
 
           echo "Branch: $BRANCH"
 
-          if [[ ! "$BRANCH" =~ ^feature\/[a-z0-9-]+$ ]]; then
-            echo "❌ Branch name '$BRANCH' is invalid."
-            echo "Expected format: feature/<lowercase-kebab-case>"
+          if [[ "$BRANCH" =~ ^main$ ]]; then
+            echo "Skipping validation for main."
+            exit 0
+          fi
+
+          PATTERN='^feature/[a-z0-9]+(-[a-z0-9]+)*$'
+
+          if [[ ! "$BRANCH" =~ $PATTERN ]]; then
+            echo "❌ Invalid branch name."
+            echo
+            echo "Expected:"
+            echo "  feature/repository-scanner"
+            echo "  feature/ide-detection"
+            echo "  feature/cache-index"
             exit 1
           fi
 

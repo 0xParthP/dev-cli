@@ -10,3 +10,4 @@ pub mod ide;
 pub mod installer;
 pub mod models;
 pub mod scanner;
+pub mod utils;

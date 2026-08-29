@@ -9,17 +9,18 @@ use crate::{
     cli::{OpenArgs, ProjectCommand, ProjectSubcommand},
     config::Config,
     ide::launcher,
+    utils::path::display_path,
 };
 
 /// Execute a project command.
 ///
 /// Dispatches to appropriate subcommand handler:
-/// - `list` — List configured project roots
-/// - `open` — Open a project in an IDE
+/// - `list` — List configured project roots.
+/// - `open` — Open a project in an IDE.
 ///
 /// # Errors
 ///
-/// Returns error if any command operation fails.
+/// Returns an error if any command operation fails.
 pub fn execute(cmd: ProjectCommand) -> Result<()> {
     match cmd.command {
         ProjectSubcommand::List => list(),
@@ -29,11 +30,12 @@ pub fn execute(cmd: ProjectCommand) -> Result<()> {
 
 /// Shorthand for opening a project.
 ///
-/// Used by `dev open <PROJECT>` which is equivalent to `dev project open <PROJECT>`.
+/// Used by `dev open <PROJECT>`, which is equivalent to
+/// `dev project open <PROJECT>`.
 ///
 /// # Errors
 ///
-/// Returns error if opening fails.
+/// Returns an error if opening fails.
 pub fn open_shortcut(args: OpenArgs) -> Result<()> {
     open(args)
 }
@@ -42,16 +44,19 @@ pub fn open_shortcut(args: OpenArgs) -> Result<()> {
 ///
 /// Displays the directories where dev-cli searches for projects.
 ///
+/// **Note:** Repository discovery is implemented in `scanner.rs` during Sprint
+/// 2.1, but CLI integration happens in Sprint 2.2.
+///
 /// # Errors
 ///
-/// Returns error if configuration cannot be loaded.
+/// Returns an error if configuration cannot be loaded.
 fn list() -> Result<()> {
     let config = Config::load()?;
 
     println!("{}", "Configured Project Roots".bold());
 
     for root in config.projects_root {
-        println!("📁 {}", root.display());
+        println!("📁 {}", display_path(&root));
     }
 
     Ok(())
@@ -59,19 +64,15 @@ fn list() -> Result<()> {
 
 /// Open a project in an IDE.
 ///
-/// Searches for the project in configured roots and launches in specified IDE.
-/// If IDE is not specified, uses the configured default.
-///
-/// # Arguments
-///
-/// * `args` — Project name and optional IDE override
+/// Searches for the project in configured roots and launches it in the
+/// specified IDE. If no IDE is specified, uses the configured default.
 ///
 /// # Errors
 ///
-/// Returns error if:
-/// - Configuration cannot be loaded
-/// - Project is not found in any configured root
-/// - IDE cannot be launched
+/// Returns an error if:
+/// - configuration cannot be loaded,
+/// - the project is not found in any configured root,
+/// - the IDE launcher fails.
 fn open(args: OpenArgs) -> Result<()> {
     let config = Config::load()?;
 
@@ -83,7 +84,7 @@ fn open(args: OpenArgs) -> Result<()> {
 
             launcher::launch(ide, &candidate)?;
 
-            println!("{} {}", "Opened".green(), candidate.display());
+            println!("{} {}", "Opened".green(), display_path(&candidate));
 
             return Ok(());
         }
