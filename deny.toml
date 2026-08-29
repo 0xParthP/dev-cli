@@ -1,18 +1,18 @@
 # deny.toml
-# Configuration for cargo-deny
+# Compatible with cargo-deny v0.19+
 
 [graph]
 all-features = true
 
 [advisories]
-vulnerability = "deny"
+# Vulnerabilities and unsound crates are denied by default.
+# Only configure behaviour that differs from the defaults.
 
-# Check unmaintained crates in the whole dependency graph,
-# but don't fail CI because of them.
-unmaintained = "all"
-
-# Warn about yanked crates.
+# Warn if a crate version has been yanked from crates.io.
 yanked = "warn"
+
+# Ignore specific advisories here if needed in the future.
+ignore = []
 
 [licenses]
 allow = [
@@ -21,7 +21,7 @@ allow = [
     "BSD-2-Clause",
     "BSD-3-Clause",
     "ISC",
-    "Unicode-3.0",
+    "Unicode-DFS-2016",
 ]
 
 [bans]
