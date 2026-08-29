@@ -1,19 +1,13 @@
-//! Global installation command implementation.
-//!
-//! Implements `dev install` for installing dev-cli globally in user's system.
+//! Install command implementation.
 
 use anyhow::Result;
 
-use crate::installer;
+use crate::{cli::InstallCommand, installer};
 
-/// Execute the install command.
+/// Executes the `dev install` command.
 ///
-/// Copies the dev-cli executable to ~/.local/bin and initializes configuration.
-/// After installation, `dev` command will be available in PATH.
-///
-/// # Errors
-///
-/// Returns error if installation fails (e.g., cannot write to target location).
-pub fn execute() -> Result<()> {
+/// The command currently installs the CLI globally (Windows-first).
+/// Future versions may support updating and uninstalling.
+pub fn execute(_cmd: InstallCommand) -> Result<()> {
     installer::install()
 }

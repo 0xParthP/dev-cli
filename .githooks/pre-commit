@@ -1,6 +1,27 @@
 #!/usr/bin/env bash
 set -e
 
+# Get current branch name
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+
+# Allow main branch
+if [[ "$BRANCH_NAME" != "main" && "$BRANCH_NAME" != feature/* ]]; then
+    echo ""
+    echo "❌ Invalid branch name: $BRANCH_NAME"
+    echo ""
+    echo "Branches must be named:"
+    echo "  feature/<short-description>"
+    echo ""
+    echo "Examples:"
+    echo "  feature/repository-scanner"
+    echo "  feature/ide-detection"
+    echo "  feature/testing-improvements"
+    echo ""
+    exit 1
+fi
+
+echo "✅ Branch name OK: $BRANCH_NAME"
+
 echo "🦀 Running rustfmt..."
 cargo fmt
 

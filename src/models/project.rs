@@ -19,7 +19,6 @@ use serde::{Deserialize, Serialize};
 /// - `framework` — Used framework (optional, future use)
 /// - `branch` — Current Git branch (optional, future use)
 /// - `dirty` — Whether working directory has uncommitted changes (future use)
-#[expect(dead_code, reason = "Used by the repository scanner in Sprint 2")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Project {
     /// Project name (typically directory name).

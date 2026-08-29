@@ -1,0 +1,47 @@
+name: Coverage
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Generate HTML Coverage
+        run: cargo llvm-cov --workspace --all-features --html
+
+      - name: Generate LCOV
+        run: cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info
+
+      - name: Upload HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: llvm-cov-html
+          path: target/llvm-cov/html
+
+      - name: Upload LCOV
+        uses: actions/upload-artifact@v4
+        with:
+          name: llvm-cov-lcov
+          path: lcov.info
+      
+      - name: Generate Markdown Summary
+        run: cargo llvm-cov --workspace --all-features --summary-only > coverage-summary.txt
+
+      - name: Publish Coverage Summary
+        run: |
+          echo "## Code Coverage" >> $GITHUB_STEP_SUMMARY
+          cat coverage-summary.txt >> $GITHUB_STEP_SUMMARY

@@ -47,7 +47,7 @@ pub enum Commands {
     Ide(IdeCommand),
 
     /// Install dev-cli globally in ~/.local/bin.
-    Install,
+    Install(InstallCommand),
 
     /// Open a project (shorthand for `project open`).
     ///
@@ -133,3 +133,6 @@ pub enum IdeSubcommand {
     /// List all detected IDEs on the system.
     List,
 }
+
+#[derive(clap::Args, Debug)]
+pub struct InstallCommand {}

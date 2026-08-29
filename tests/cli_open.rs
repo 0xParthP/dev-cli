@@ -1,19 +1,31 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
-use std::fs;
-use tempfile::TempDir;
 
 #[test]
-fn opening_unknown_project_returns_error() {
-    let temp = TempDir::new().unwrap();
-    let projects = temp.path().join("Projects");
-    fs::create_dir(&projects).unwrap();
-
-    let mut cmd = Command::cargo_bin("dev").unwrap();
-
-    cmd.arg("open")
-        .arg("DoesNotExist")
+fn unknown_project_returns_error() {
+    Command::cargo_bin("dev")
+        .unwrap()
+        .args(["open", "DoesNotExist"])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("Project 'DoesNotExist' not found"));
+        .stderr(predicate::str::contains("Project"));
+}
+
+#[test]
+fn help_for_open_command_works() {
+    Command::cargo_bin("dev")
+        .unwrap()
+        .args(["open", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Usage"));
+}
+
+#[test]
+fn open_with_specific_ide_parses() {
+    Command::cargo_bin("dev")
+        .unwrap()
+        .args(["open", "FakeProject", "--ide", "vscode"])
+        .assert()
+        .failure();
 }

@@ -1,0 +1,34 @@
+name: Branch Name
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate-branch-name:
+    name: Validate Branch Name
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check branch name
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BRANCH="${{ github.head_ref }}"
+          else
+            BRANCH="${GITHUB_REF#refs/heads/}"
+          fi
+
+          echo "Branch: $BRANCH"
+
+          if [[ ! "$BRANCH" =~ ^feature\/[a-z0-9-]+$ ]]; then
+            echo "❌ Branch name '$BRANCH' is invalid."
+            echo "Expected format: feature/<lowercase-kebab-case>"
+            exit 1
+          fi
+
+          echo "✅ Branch name is valid."
