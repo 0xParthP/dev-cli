@@ -6,42 +6,52 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   coverage:
+    name: LLVM Coverage
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v5
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
 
-      - uses: Swatinem/rust-cache@v2
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
 
-      - uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
 
-      - name: Generate HTML Coverage
+      - name: Generate HTML coverage report
         run: cargo llvm-cov --workspace --all-features --html
 
-      - name: Generate LCOV
+      - name: Generate LCOV report
         run: cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info
 
-      - name: Upload HTML
-        uses: actions/upload-artifact@v4
+      - name: Generate Markdown summary
+        run: cargo llvm-cov --workspace --all-features --summary-only > coverage-summary.txt
+
+      - name: Publish coverage summary
+        run: |
+          echo "## Code Coverage" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          cat coverage-summary.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v5
         with:
           name: llvm-cov-html
-          path: target/llvm-cov/html
+          path: target/llvm-cov-target/llvm-cov/html
+          if-no-files-found: error
 
-      - name: Upload LCOV
-        uses: actions/upload-artifact@v4
+      - name: Upload LCOV report
+        uses: actions/upload-artifact@v5
         with:
           name: llvm-cov-lcov
           path: lcov.info
-      
-      - name: Generate Markdown Summary
-        run: cargo llvm-cov --workspace --all-features --summary-only > coverage-summary.txt
-
-      - name: Publish Coverage Summary
-        run: |
-          echo "## Code Coverage" >> $GITHUB_STEP_SUMMARY
-          cat coverage-summary.txt >> $GITHUB_STEP_SUMMARY
+          if-no-files-found: error
