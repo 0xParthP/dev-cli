@@ -27,12 +27,30 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
+      # Generate HTML once
       - name: Generate HTML coverage report
         run: cargo llvm-cov --workspace --all-features --html
 
+      # Upload it immediately before another llvm-cov invocation deletes it.
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v5
+        with:
+          name: llvm-cov-html
+          path: target/llvm-cov/html
+          if-no-files-found: error
+
+      # Generate LCOV separately.
       - name: Generate LCOV report
         run: cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info
 
+      - name: Upload LCOV report
+        uses: actions/upload-artifact@v5
+        with:
+          name: llvm-cov-lcov
+          path: lcov.info
+          if-no-files-found: error
+
+      # Generate summary last.
       - name: Generate coverage summary
         run: cargo llvm-cov --workspace --all-features --summary-only > coverage-summary.txt
 
@@ -44,17 +62,3 @@ jobs:
             echo
             cat coverage-summary.txt
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload HTML coverage report
-        uses: actions/upload-artifact@v5
-        with:
-          name: llvm-cov-html
-          path: target/llvm-cov/html
-          if-no-files-found: error
-
-      - name: Upload LCOV report
-        uses: actions/upload-artifact@v5
-        with:
-          name: llvm-cov-lcov
-          path: lcov.info
-          if-no-files-found: error
