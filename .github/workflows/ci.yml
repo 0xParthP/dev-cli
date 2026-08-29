@@ -1,23 +1,25 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: [main]
+  push:
     branches: [main]
 
 jobs:
-  test:
+  build-test:
+    name: Build & Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: false
       matrix:
         os:
-          - windows-latest
           - ubuntu-latest
+          - windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -25,14 +27,18 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
       - name: Format
-        run: cargo fmt --all -- --check
+        run: cargo fmt-check
 
       - name: Lint
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo lint
 
-      - name: Test
-        run: cargo test --workspace --all-features --locked
+      - name: Tests
+        run: cargo test-all
 
-      - name: Build release binary
+      - name: Release build
         run: cargo build --workspace --release --locked

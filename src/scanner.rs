@@ -1,62 +1,98 @@
-//! Repository discovery and scanning.
+//! Repository discovery engine.
 //!
-//! Automatically discovers Git repositories in configured directories.
+//! This module recursively walks configured project roots looking for Git
+//! repositories and returns a collection of [`Project`] values.
 //!
-//! # Future Implementation (Sprint 2+)
+//! The scanner is intentionally filesystem-only. It does **not** inspect Git
+//! metadata such as branches or remotes—that happens in Sprint 3.
 //!
-//! This module will implement automatic project discovery by:
-//! 1. Recursively scanning configured project root directories
-//! 2. Finding directories containing `.git` subdirectories
-//! 3. Building list of discoverable projects
-//!
-//! This will allow users to add project roots without manually listing each project.
-//!
-//! # Example (Future)
+//! # Example
 //!
 //! ```no_run
-//! # use anyhow::Result;
-//! # fn example() -> Result<()> {
-//! use dev_cli::scanner;
 //! use std::path::PathBuf;
+//! use dev_cli::scanner::discover_projects;
 //!
-//! let roots = vec![PathBuf::from("~/Projects")];
-//! let projects = scanner::discover_projects(&roots);
-//! println!("Found {} projects", projects.len());
-//! # Ok(())
-//! # }
+//! let roots = vec![PathBuf::from("C:/Users/parth/Documents/projects")];
+//! let projects = discover_projects(&roots).unwrap();
+//!
+//! println!("Found {} repositories.", projects.len());
 //! ```
-//!
-//! # Current Status
-//!
-//! This is a placeholder for Sprint 2 implementation. Currently returns empty list.
 
-#![allow(dead_code)]
+use anyhow::Result;
+use ignore::WalkBuilder;
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+};
 
-use std::path::PathBuf;
+use crate::models::project::Project;
 
-/// Discover Git repositories in specified root directories.
+/// Directory names that should never be scanned.
 ///
-/// **Note:** Currently a placeholder returning empty list. Full implementation
-/// planned for Sprint 2.
+/// These are typically dependency directories or build outputs that may contain
+/// nested `.git` folders which are not real developer projects.
+const IGNORED_DIRS: &[&str] =
+    &[".git", "target", "node_modules", ".venv", "venv", "build", "dist", ".idea", ".vscode"];
+
+/// Discover every Git repository beneath one or more configured project roots.
 ///
-/// When implemented, will recursively scan directories for `.git` folders
-/// and return paths to discovered repositories.
+/// Duplicate repositories are removed using canonical filesystem paths, and the
+/// returned list is sorted alphabetically by project name.
 ///
-/// # Arguments
+/// # Errors
 ///
-/// * `_roots` — Directories to scan for projects
-///
-/// # Returns
-///
-/// Vector of paths to discovered projects. Currently empty (placeholder).
-///
-/// # Future Enhancements
-///
-/// - Recursive directory traversal
-/// - `.gitignore` support to skip excluded directories
-/// - Configurable max depth
-/// - Caching for performance
-/// - Watcher for changes
-pub fn discover_projects(_roots: &[PathBuf]) -> Vec<PathBuf> {
-    Vec::new()
+/// Returns an error only if a discovered repository cannot be canonicalised.
+pub fn discover_projects(roots: &[PathBuf]) -> Result<Vec<Project>> {
+    let mut projects = Vec::new();
+    let mut seen = HashSet::new();
+
+    for root in roots {
+        if !root.exists() {
+            continue;
+        }
+
+        scan_root(root, &mut projects, &mut seen)?;
+    }
+
+    projects.sort_by(|a, b| a.name.cmp(&b.name));
+
+    Ok(projects)
+}
+
+/// Scan a single configured root for Git repositories.
+fn scan_root(root: &Path, projects: &mut Vec<Project>, seen: &mut HashSet<PathBuf>) -> Result<()> {
+    let walker = WalkBuilder::new(root)
+        .hidden(false)
+        .git_ignore(true)
+        .git_exclude(true)
+        .git_global(true)
+        .filter_entry(|entry| {
+            let name = entry.file_name().to_string_lossy();
+            !IGNORED_DIRS.contains(&name.as_ref())
+        })
+        .build();
+
+    for entry in walker {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(_) => continue,
+        };
+
+        let path = entry.path();
+
+        if is_git_repo(path) {
+            let repo_root = path.canonicalize()?;
+
+            if seen.insert(repo_root.clone()) {
+                projects.push(Project::new(repo_root, root.to_path_buf()));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Returns `true` if the provided path is the root of a Git repository.
+fn is_git_repo(path: &Path) -> bool {
+    path.join(".git").is_dir()
 }
