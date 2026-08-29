@@ -2,8 +2,11 @@
 name = "dev-cli"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
+repository = "https://github.com/0xParthP/dev-cli"
 authors = ["Parth Prajapati"]
 description = "A modern Git project manager for developers."
+readme = "README.md"
 
 [[bin]]
 name = "dev"
