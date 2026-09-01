@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c \"if echo \\\"$CC_TOOL_USE_FILE_PATHS\\\" | grep -q '\\.rs$'; then cd $CC_PROJECT_DIR && cargo fmt --quiet 2>/dev/null; fi\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c \"if echo \\\"$CC_TOOL_INPUT\\\" | grep -qE 'git\\s+commit|git\\s+push'; then cd $CC_PROJECT_DIR && UNWRAP_COUNT=$(grep -rn '\\.unwrap()' src/ --include='*.rs' | grep -v '#\\[cfg(test)\\]' | grep -v 'mod tests' | grep -v '// OK:' | grep -v '// SAFETY:' | wc -l); if [ \\\"$UNWRAP_COUNT\\\" -gt 0 ]; then echo \\\"BLOCKED: Found $UNWRAP_COUNT .unwrap() call(s) in src/. Fix before committing:\\\"; grep -rn '\\.unwrap()' src/ --include='*.rs' | grep -v '#\\[cfg(test)\\]' | grep -v 'mod tests' | grep -v '// OK:' | grep -v '// SAFETY:'; exit 1; fi; fi\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
