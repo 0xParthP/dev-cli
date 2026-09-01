@@ -1,0 +1,24 @@
+docs: simplify human-facing documentation and remove unfinished mdBook
+
+The repository had three overlapping documentation sets: a human-navigable
+reference (docs/, ARCHITECTURE.md, CONTRIBUTING.md), an unfinished mdBook
+tutorial (docs/book/) of mostly empty stubs, and an LLM-targeting knowledge
+base (.claude/). This commit consolidates the human-facing layer.
+
+- Delete docs/book/ (unfinished tutorial; content was duplicated in
+  ARCHITECTURE.md and docs/getting-started.md)
+- Rewrite CONTRIBUTING.md to remove the "For AI Agents / LLMs" section;
+  fix stale tests/cli_*.rs reference
+- Rewrite ARCHITECTURE.md to drop exhaustive per-layer Files:/Key Types:
+  matrices; keep the big-picture design narrative
+- Rewrite docs/project-structure.md to remove per-file Size:/Key
+  Function:/Used by:/Uses: boilerplate
+- Update docs/roadmap.md, docs/testing.md, docs/scanner.md, docs/style-guide.md,
+  docs/rust-for-dev-cli.md, docs/cli-design.md, docs/configuration.md,
+  docs/ide-system.md to remove duplication, LLM-targeted directives, and
+  stale test-path references
+- Add .claude/settings.json, .claude/settings.local.json,
+  .claude/scheduled_tasks.lock, .claude/.headroom_wrap_settings.lock to
+  .gitignore so local Claude state doesn't leak
+- Add .claude/knowledge/MAINTENANCE.md with line 28 fixed to reference
+  .claude/CLAUDE.md (the convention is now in .claude/, not at root)

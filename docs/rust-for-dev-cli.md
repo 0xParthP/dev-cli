@@ -613,7 +613,7 @@ Try these challenges:
 
 1. **Add a new command:** Follow [CONTRIBUTING.md](../CONTRIBUTING.md#adding-a-new-command)
 2. **Add IDE detection:** Extend `src/ide/detect.rs` with Windows Registry support
-3. **Write a test:** Add a test case to `tests/cli_*.rs`
+3. **Write a test:** Add a test case to one of the integration test files in `tests/` (see [testing.md](testing.md))
 4. **Refactor:** Split `src/commands/project.rs` into smaller functions
 
 ---

@@ -1,57 +1,19 @@
 # Testing
 
-The complete testing philosophy and practices for `dev-cli`.
+Tests are part of "done." Every new feature lands with its unit and integration tests, and the full suite passes locally before the PR opens.
 
----
+## Layout
 
-## Testing Pyramid
+We follow the standard Rust split:
 
-```
-       ▲
-      ╱ ╲
-     ╱   ╲  E2E / Manual Tests
-    ╱─────╲ (rare, high value)
-   ╱       ╲
-  ╱         ╲ Integration Tests
- ╱───────────╲ (cli_*.rs, medium effort)
-╱             ╲
-╱───────────────╲ Unit Tests
-                (fast, cheap, many)
-```
+- **Unit tests** live next to the code they exercise, in a `#[cfg(test)] mod tests` block at the bottom of the file. They have access to private items.
+- **Integration tests** live in `tests/`, one file per top-level command. Each file spawns the compiled `dev` binary as a subprocess with `assert_cmd` and asserts on its output with `predicates`.
 
-**Philosophy:**
-- ✅ Many unit tests (fast, cheap)
-- ✅ Some integration tests (verify behavior)
-- ✅ Few E2E tests (manual verification)
-
----
+A typical round of changes adds tests in both places: a unit test for the new pure function, an integration test for the user-facing command.
 
 ## Unit Tests
 
-### What They Test
-
-Small, focused functions in isolation.
-
-### Location
-
-Same file as the code being tested, in `#[cfg(test)]` module:
-
-```rust
-// src/config.rs
-pub fn load() -> Result<Config> { /* ... */ }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_config_load_default() {
-        // Test when file doesn't exist
-    }
-}
-```
-
-### Example
+Keep them small and focused on one behavior. The Arrange / Act / Assert shape is a good default.
 
 ```rust
 #[cfg(test)]
@@ -59,95 +21,32 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_default_config() {
+    fn default_config_uses_vscode() {
+        // Arrange + Act
         let config = Config::default();
+
+        // Assert
         assert_eq!(config.default_ide, Ide::Vscode);
         assert!(!config.projects_root.is_empty());
     }
 
     #[test]
-    fn test_ide_parsing() {
+    fn ide_parses_from_string() {
         assert_eq!("vscode".parse::<Ide>(), Ok(Ide::Vscode));
         assert_eq!("cursor".parse::<Ide>(), Ok(Ide::Cursor));
     }
 }
 ```
 
-### Running Unit Tests
+Name tests after the behavior: `default_config_uses_vscode`, not `test1`. When a test fails, the name should tell you what's wrong without opening the file.
 
-```bash
-# Run all tests
-cargo test
-
-# Run specific test
-cargo test test_default_config
-
-# Run with output
-cargo test -- --nocapture
-
-# Run only tests in a module
-cargo test --lib config::tests
-```
-
-### Guidelines
-
-- **Test one thing per test**
-- **Use descriptive names** — `test_<function>_<scenario>`
-- **Arrange, Act, Assert pattern:**
-  ```rust
-  #[test]
-  fn test_config_default() {
-      // Arrange
-      let expected = Ide::Vscode;
-      
-      // Act
-      let config = Config::default();
-      
-      // Assert
-      assert_eq!(config.default_ide, expected);
-  }
-  ```
-
----
+Run a single test or a module with `cargo test <name>` or `cargo test --lib <module>::tests`. Add `-- --nocapture` to see `println!` output.
 
 ## Integration Tests
 
-### What They Test
+These run the actual CLI binary. They catch problems the unit tests can't, like argument parsing, exit codes, and end-to-end output.
 
-Full command execution through the CLI, verifying end-to-end behavior.
-
-### Location
-
-Separate files in `tests/` directory:
-
-```
-tests/
-├── cli_config.rs
-├── cli_ide.rs
-└── cli_open.rs
-```
-
-### Framework
-
-Use `assert_cmd` to spawn CLI as subprocess:
-
-```rust
-use assert_cmd::Command;
-use predicates::prelude::*;
-
-#[test]
-fn config_show_runs() {
-    let mut cmd = Command::cargo_bin("dev").unwrap();
-    
-    cmd.arg("config")
-        .arg("show")
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("default_ide"));
-}
-```
-
-### Example: tests/cli_config.rs
+`tests/config.rs` is the canonical example:
 
 ```rust
 use assert_cmd::Command;
@@ -155,309 +54,101 @@ use predicates::prelude::*;
 
 #[test]
 fn config_show_contains_default_ide() {
-    let mut cmd = Command::cargo_bin("dev").unwrap();
-    
-    cmd.arg("config")
+    Command::cargo_bin("dev")
+        .unwrap()
+        .arg("config")
         .arg("show")
         .assert()
         .success()
         .stdout(predicate::str::contains("default_ide"));
 }
-
-#[test]
-fn config_show_contains_projects_root() {
-    let mut cmd = Command::cargo_bin("dev").unwrap();
-    
-    cmd.arg("config")
-        .arg("show")
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("projects_root"));
-}
 ```
 
-### Example: tests/cli_ide.rs
-
-```rust
-use assert_cmd::Command;
-
-#[test]
-fn ide_list_runs() {
-    let mut cmd = Command::cargo_bin("dev").unwrap();
-    
-    cmd.arg("ide")
-        .arg("list")
-        .assert()
-        .success();
-}
-
-#[test]
-fn ide_list_shows_installed() {
-    let mut cmd = Command::cargo_bin("dev").unwrap();
-    
-    cmd.arg("ide")
-        .arg("list")
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Installed").or(predicate::str::contains("✓")));
-}
-```
-
-### Example: tests/cli_open.rs
+`tests/launcher.rs` shows the pattern when a test needs a real project tree on disk:
 
 ```rust
 use assert_cmd::Command;
 use predicates::prelude::*;
+use common::temp_project::TempProject;
 
 #[test]
-fn open_nonexistent_project_fails() {
-    let mut cmd = Command::cargo_bin("dev").unwrap();
-    
-    cmd.arg("open")
-        .arg("nonexistent-project-xyz")
+fn open_launches_ide_for_known_project() {
+    let project = TempProject::new("demo");
+    // writes a fake project under a temp dir
+    // points the env at it so Config::load() finds it
+
+    Command::cargo_bin("dev")
+        .unwrap()
+        .arg("open")
+        .arg("demo")
         .assert()
-        .failure()
-        .stderr(predicate::str::contains("not found"));
+        .success();
 }
 ```
 
-### Running Integration Tests
-
-```bash
-# Run all tests
-cargo test
-
-# Run only integration tests
-cargo test --test '*'
-
-# Run specific test
-cargo test --test cli_config
-
-# Show output
-cargo test --test cli_config -- --nocapture
-```
+Shared helpers live in `tests/common/`. `temp_project::TempProject` creates a temporary project tree, sets the right env vars so `Config::load()` finds it, and cleans up on drop. `assertions` has reusable predicate chains.
 
 ### Predicates
 
-Common assertions with `predicates` crate:
+The `predicates` crate covers most assertions:
 
 ```rust
-.stdout(predicate::str::contains("text"))      // Contains substring
-.stdout(predicate::str::contains_utf8("text")) // UTF-8 match
-.stderr(predicate::str::is_empty())            // Empty stderr
-.status(predicate::status::success())          // Exit code 0
-.status(predicate::status::failure())          // Exit code != 0
+.stdout(predicate::str::contains("default_ide"))   // substring
+.stderr(predicate::str::is_empty())                 // no output on stderr
+.success()                                           // exit 0
+.failure()                                           // non-zero exit
 ```
 
-### Temporary Directories
+### Temporary Files
 
-For tests that need files:
+Use `tempfile::TempDir` for tests that need a real filesystem. The directory is removed when the `TempDir` is dropped.
 
-```rust
-use tempfile::TempDir;
-use std::fs;
+## What Lives Where
 
-#[test]
-fn test_with_temp_dir() {
-    let temp = TempDir::new().unwrap();
-    let config_path = temp.path().join("config.toml");
-    
-    // Write test config
-    fs::write(&config_path, "test content").unwrap();
-    
-    // Test using temp_config_path
-    
-    // Automatically cleaned up when temp is dropped
-}
-```
+| Code under test | Test files |
+|-----------------|------------|
+| `Config`, `Ide`, `Project` | unit tests in `src/config.rs`, `src/models/ide.rs` |
+| `dev config …` | `tests/config.rs`, `tests/commands_config.rs` |
+| `dev project …`, `dev open …` | `tests/project.rs`, `tests/project_commands.rs` |
+| IDE launching | `tests/launcher.rs` |
+| `dev install` | `tests/install.rs`, `tests/commands_install.rs` |
+| Top-level dispatch | `tests/main_cli.rs` |
+| `src/scanner.rs` | `tests/scanner.rs` |
+| Path handling | `tests/path.rs` |
 
----
+The split isn't rigid — add a new test file when a new command lands.
 
-## Test Coverage
+## Error Cases
 
-### Current Coverage
+A test that only covers the happy path isn't enough. For every public function and every command, write at least one test that exercises the failure path: missing config, missing project, invalid input. These tests are what catch regressions when the codebase is refactored.
 
-| Module | Unit Tests | Integration Tests |
-|--------|------------|-------------------|
-| cli.rs | None | Implicit (via other tests) |
-| config.rs | None (partial) | In cli_config.rs |
-| commands/ | None | In cli_*.rs |
-| ide/ | None | In cli_ide.rs |
-
-### Target Coverage
-
-- **Public APIs:** 80%+ coverage
-- **Error paths:** All error cases tested
-- **Critical paths:** 100% coverage
-
-### Measuring Coverage
+## Running the Suite
 
 ```bash
-# Install coverage tool
-cargo install cargo-tarpaulin
-
-# Generate coverage report
-cargo tarpaulin --out Html
+cargo test                            # everything
+cargo test --lib                      # unit tests only
+cargo test --test config              # one integration test file
+cargo test -- --nocapture             # show output
 ```
 
----
+`cargo xtask check` runs the full pre-commit suite: `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test`, `cargo doc --no-deps`. See [xtask.md](xtask.md).
 
-## Running All Checks
+## Coverage
 
-Before committing, run the full check suite:
+We track coverage through `cargo llvm-cov` in CI; locally, `cargo xtask coverage` (or `cargo llvm-cov nextest --html` directly) writes an HTML report. We don't gate PRs on a number — the goal is to make sure new code has tests, not to chase a percentage. Use the report to find the obvious gaps.
 
-```bash
-# Format
-cargo fmt
+## Guidelines
 
-# Lint
-cargo clippy
+A few rules that keep the suite healthy:
 
-# Test
-cargo test
-
-# Docs
-cargo doc --no-deps
-
-# All at once
-cargo fmt && cargo clippy && cargo test && cargo doc --no-deps
-```
-
----
-
-## CI/CD Testing
-
-### GitHub Actions (Planned)
-
-The `.github/workflows/` directory will contain:
-
-- **Rust Check** — Format, clippy, build
-- **Test** — Run all tests
-- **Documentation** — Verify docs build
-
-### Local Testing
-
-To simulate CI locally:
-
-```bash
-# Check formatting
-cargo fmt -- --check
-
-# Lint with no warnings
-cargo clippy -- -D warnings
-
-# Test all
-cargo test --all
-
-# Build all
-cargo build --release
-```
-
----
-
-## Best Practices
-
-### Do
-
-✅ Test behavior, not implementation
-✅ Use descriptive test names
-✅ Test error cases
-✅ Keep tests simple and focused
-✅ Mock external dependencies (file I/O, network)
-✅ Use temporary directories for file tests
-
-### Don't
-
-❌ Test private implementation details
-❌ Use random data (use fixed test data)
-❌ Make tests depend on execution order
-❌ Write overly complex test assertions
-❌ Test third-party libraries
-❌ Leave debugging code in tests
-
----
-
-## Future Test Infrastructure
-
-### cargo-nextest
-
-Faster test runner:
-
-```bash
-cargo install cargo-nextest
-cargo nextest run
-```
-
-Benefits:
-- Faster test execution (parallel by default)
-- Better output
-- Test listing
-
-### Property-Based Testing
-
-Use `proptest` for generative testing:
-
-```rust
-#[cfg(test)]
-mod tests {
-    use proptest::proptest;
-
-    proptest! {
-        #[test]
-        fn test_config_roundtrip(
-            ide in "cursor|vscode|claude",
-            root in ".*",
-        ) {
-            // Property-based test
-        }
-    }
-}
-```
-
-### Fuzzing
-
-Use `cargo fuzz` to find edge cases in TOML parsing.
-
----
-
-## Debugging Tests
-
-### Run with Logging
-
-```bash
-# Enable tracing output in tests
-RUST_LOG=debug cargo test -- --nocapture
-```
-
-### Attach Debugger
-
-With rust-analyzer or lldb:
-
-```bash
-# Use VS Code debug configuration
-# Or attach lldb/gdb to test process
-```
-
-### Print Debug Info
-
-```rust
-#[test]
-fn test_something() {
-    let value = compute();
-    
-    // Print for debugging (shows with --nocapture)
-    eprintln!("Debug: {:?}", value);
-    
-    assert_eq!(value, expected);
-}
-```
-
----
+- **Test behavior, not implementation.** If you refactor the internals, the tests should still pass.
+- **One assertion focus per test.** Multiple `assert_eq!` lines are fine when they all check the same behavior; separate tests when they're checking different behaviors.
+- **No shared state between tests.** Each test sets up its own temp project, its own config, its own env. Tests must pass in any order, in parallel.
+- **No network access.** The suite must run offline.
+- **No real user config.** `Config::load()` should never touch the developer's actual `~/.config/dev-cli/config.toml`. Tests use `temp_project` to point at a sandbox.
 
 ## See Also
 
-- [CONTRIBUTING.md](../CONTRIBUTING.md) — Testing requirements
-- [docs/project-structure.md](project-structure.md) — Test files
-- [assert_cmd](https://docs.rs/assert_cmd/latest/assert_cmd/) — CLI testing
-- [predicates](https://docs.rs/predicates/latest/predicates/) — Test assertions
-- [tempfile](https://docs.rs/tempfile/latest/tempfile/) — Temporary files
+- [CONTRIBUTING.md](../CONTRIBUTING.md) — the pre-commit checklist
+- [docs/project-structure.md](project-structure.md) — where the test files live
+- [assert_cmd](https://docs.rs/assert_cmd/latest/assert_cmd/) — the binary-spawning crate we use
