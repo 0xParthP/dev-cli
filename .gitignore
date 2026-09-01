@@ -4,3 +4,9 @@ coverage/
 lcov.info
 *.profraw
 *.profdata
+.claude/settings.json
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/.headroom_wrap_settings.lock
+graphify-out/*
+.serena/

@@ -1,1 +1,0 @@
-# IDE Detection Algorithm

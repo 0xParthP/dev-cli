@@ -1,153 +1,36 @@
 # IDE System
 
-How `dev-cli` detects and launches IDEs.
+`dev-cli` discovers installed IDEs at runtime and spawns the right one when you ask it to open a project. There are three pieces: detection (find what's installed), the registry (the data type that represents a found IDE), and the launcher (spawn the process).
 
----
+## Detection
 
-## Overview
+Detection runs in two stages and merges the results:
 
-The IDE system consists of three parts:
+1. **PATH lookup** — for each supported CLI shim (`code`, `cursor`, `claude`, `wt`), ask the `which` crate where it lives. PATH is checked first because it's the fastest, most common case, and any user with a CLI install will be found here.
+2. **Common install paths** — for IDEs that often ship without a CLI on PATH, check the platform's standard locations. On Windows that means `%LocalAppData%\Programs\Microsoft VS Code\bin\code.cmd`, `%LocalAppData%\Programs\Cursor\Cursor.exe`, `~/.local/bin/claude.exe`, and similar.
 
-1. **Detection** — Find installed IDEs on the system
-2. **Registry** — Store information about detected IDEs
-3. **Launcher** — Spawn IDE processes
+The two stages run sequentially and we deduplicate as we go — if `which code` already found VS Code in PATH, the second stage skips it. The output is a `Vec<InstalledIde>` sorted in a stable order.
 
-```mermaid
-graph LR
-    Detect["IDE Detection<br/>(detect_ides)"]
-    Registry["Registry<br/>(InstalledIde)"]
-    Launcher["Launcher<br/>(launch IDE)"]
-    
-    Detect -->|Found| Registry
-    Registry -->|Path + IDE| Launcher
-    Launcher -->|spawn()| IDE["External IDE"]
-```
-
----
-
-## IDE Detection Algorithm
-
-Detection happens in **stages** for reliability and performance:
-
-### Stage 1: CLI Tool Detection (PATH)
-
-Check if IDE is available as a command-line tool in PATH:
+Detection runs on every `dev` invocation. It is fast (single-digit milliseconds for PATH; filesystem `exists()` checks for the rest), and re-running it means a newly installed IDE is picked up immediately with no cache invalidation. We don't cache.
 
 ```rust
-fn detect_cli(list: &mut Vec<InstalledIde>, ide: Ide, name: &str, cmd: &str) {
-    if let Ok(path) = which(cmd) {
-        list.push(InstalledIde::new(ide, name, path));
-    }
+fn detect_ides() -> Vec<InstalledIde> {
+    let mut list = Vec::new();
+
+    // Stage 1: PATH
+    detect_cli(&mut list, Ide::Vscode, "VS Code", "code");
+    detect_cli(&mut list, Ide::Cursor,  "Cursor",  "cursor");
+    detect_cli(&mut list, Ide::Claude,  "Claude Code", "claude");
+    detect_cli(&mut list, Ide::Terminal, "Windows Terminal", "wt");
+
+    // Stage 2: standard install paths (Windows-leaning today)
+    detect_common_install_paths(&mut list);
+
+    list
 }
 ```
 
-**What it checks:**
-- `which code` → Find VS Code CLI
-- `which cursor` → Find Cursor CLI
-- `which claude` → Find Claude Code CLI
-- `which wt` → Find Windows Terminal CLI
-
-**Advantages:**
-- Fast (milliseconds)
-- Works for CLI-installed tools
-- Works with custom installation paths
-
-**Limitations:**
-- Only finds tools in PATH
-- Misses graphical apps without CLI wrappers
-
-### Stage 2: Common Windows Locations
-
-Check standard Windows installation directories:
-
-```rust
-fn detect_common_windows_locations(list: &mut Vec<InstalledIde>) {
-    let home = BaseDirs::new().unwrap().home_dir().to_path_buf();
-
-    // Check VS Code
-    let vscode = home.join("AppData/Local/Programs/Microsoft VS Code/bin/code.cmd");
-    if vscode.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Vscode)) {
-        list.push(InstalledIde::new(Ide::Vscode, "VS Code", vscode));
-    }
-
-    // Check Cursor
-    let cursor = home.join("AppData/Local/Programs/Cursor/Cursor.exe");
-    if cursor.exists() {
-        list.push(InstalledIde::new(Ide::Cursor, "Cursor", cursor));
-    }
-
-    // Check Claude Code
-    let claude = home.join(".local/bin/claude.exe");
-    if claude.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Claude)) {
-        list.push(InstalledIde::new(Ide::Claude, "Claude Code", claude));
-    }
-}
-```
-
-**What it checks:**
-- `C:\Users\{user}\AppData\Local\Programs\Microsoft VS Code\bin\code.cmd` — VS Code
-- `C:\Users\{user}\AppData\Local\Programs\Cursor\Cursor.exe` — Cursor
-- `C:\Users\{user}\.local\bin\claude.exe` — Claude Code
-
-**Advantages:**
-- Catches graphical installers
-- Works even without PATH setup
-
-**Limitations:**
-- Platform-specific (Windows-focused currently)
-- Must know all common installation paths
-
-### Stage 3: Deduplication
-
-Remove duplicates if IDE found in both PATH and common locations:
-
-```rust
-if vscode.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Vscode)) {
-    // Only add if not already in list
-}
-```
-
----
-
-## Full Detection Flow
-
-```mermaid
-graph TD
-    Start["detect_ides()"]
-    
-    Stage1["Stage 1: CLI Tools<br/>(PATH lookup)"]
-    Stage1_vs["which code → VS Code"]
-    Stage1_cursor["which cursor → Cursor"]
-    Stage1_claude["which claude → Claude Code"]
-    Stage1_wt["which wt → Windows Terminal"]
-    
-    Stage2["Stage 2: Windows Locations"]
-    Stage2_vs["Check standard paths"]
-    Stage2_vs_dedup["Check not duplicate"]
-    
-    Stage3["Deduplicate & Return"]
-    
-    Start --> Stage1
-    Stage1 --> Stage1_vs
-    Stage1 --> Stage1_cursor
-    Stage1 --> Stage1_claude
-    Stage1 --> Stage1_wt
-    
-    Stage1_vs --> Stage2
-    Stage1_cursor --> Stage2
-    Stage1_claude --> Stage2
-    Stage1_wt --> Stage2
-    
-    Stage2 --> Stage2_vs
-    Stage2_vs --> Stage2_vs_dedup
-    Stage2_vs_dedup --> Stage3
-    
-    Stage3 --> End["Vec<InstalledIde>"]
-```
-
----
-
-## The InstalledIde Type
+## Registry
 
 ```rust
 pub struct InstalledIde {
@@ -155,308 +38,59 @@ pub struct InstalledIde {
     pub name: String,
     pub path: PathBuf,
 }
-
-impl InstalledIde {
-    pub fn new(ide: Ide, name: &str, path: PathBuf) -> Self {
-        Self {
-            ide,
-            name: name.to_string(),
-            path,
-        }
-    }
-}
 ```
 
-**Fields:**
-- `ide` — Which IDE (Vscode, Cursor, etc.)
-- `name` — Display name (e.g., "VS Code", "Cursor")
-- `path` — Full path to executable
+`InstalledIde` is what detection produces and what the launcher consumes. `name` is the display string ("VS Code", "Cursor", "Claude Code") used by `dev ide list`; `path` is the absolute path to the executable that the launcher will spawn.
 
-**Example:**
-```rust
-InstalledIde {
-    ide: Ide::Cursor,
-    name: "Cursor",
-    path: PathBuf::from("C:\\Program Files\\Cursor\\Cursor.exe"),
-}
-```
+## Launching
 
----
-
-## IDE Launching
-
-### The Launcher
+`launcher::launch(ide, &project_path)` maps the `Ide` enum to a command name, then runs it as a subprocess with the project path as the argument.
 
 ```rust
 pub fn launch(ide: Ide, path: &Path) -> Result<()> {
     let cmd = match ide {
-        Ide::Vscode => "code",
-        Ide::Cursor => "cursor",
-        Ide::Claude => "claude",
+        Ide::Vscode   => "code",
+        Ide::Cursor   => "cursor",
+        Ide::Claude   => "claude",
         Ide::Terminal => "wt",
-        // Future IDEs
-        _ => return Err(anyhow::anyhow!("IDE not yet implemented")),
+        _ => bail!("IDE {:?} is not yet wired up", ide),
     };
 
     Command::new(cmd)
         .arg(path)
-        .spawn()?
-        .wait()?;
+        .spawn()?;
 
     Ok(())
 }
 ```
 
-**What it does:**
-1. Maps IDE enum to command name
-2. Creates new `Command` for the CLI tool
-3. Adds project path as argument
-4. Spawns the process
-5. Waits for initial spawn (doesn't wait for IDE to close)
+We `spawn` and return — we don't `wait`. The IDE is a long-lived process; waiting for it would mean `dev open` doesn't return until the user closes their editor. If the IDE crashes immediately, the error surfaces on the next read of the child process's stderr; for a quick check, the user can run the same command in a terminal and see the IDE's own error.
 
-### Example Launch
+## Adding a New IDE
 
-```bash
-$ dev open MyProject --ide cursor
-```
+1. Add a variant to `Ide` in `src/models/ide.rs` (this is what makes `--ide <name>` parse).
+2. Add a `detect_cli` call in `detect.rs` for the CLI shim, or a path check in `detect_common_install_paths` for a GUI-only install.
+3. Add a `match` arm in `launcher.rs` mapping the variant to the command name.
+4. Add a unit test for the enum parsing and an integration test for `dev ide list`.
 
-**Execution:**
-```rust
-launcher::launch(Ide::Cursor, Path::new("C:\\Users\\parth\\Projects\\MyProject"))?;
-```
+That's the whole contract. Clap picks up the new variant for `--ide` automatically, the detection stages see it on the next run, and the launcher has the spawn command.
 
-**Spawns:**
-```
-cursor C:\Users\parth\Projects\MyProject
-```
+## Why No Cached Paths
 
-This opens the project in Cursor IDE.
+Caching the executable path in `config.toml` sounds reasonable, but it creates a class of bugs we don't want:
 
----
+- The user uninstalls the IDE. The path is now stale. The error surfaces far from the cause.
+- The IDE auto-updates to a new location. Same problem.
+- The user copies their config to a new machine. Paths are machine-specific.
 
-## Supported IDEs
+Re-running detection on every invocation costs single-digit milliseconds and avoids the whole class of problem. Adding a cache is straightforward if measurement ever shows it matters.
 
-### Current (v0.1.0)
+## Platform Coverage
 
-| IDE | Status | Detection |
-|-----|--------|-----------|
-| VS Code | ✅ Active | PATH + Windows locations |
-| Cursor | ✅ Active | PATH + Windows locations |
-| Claude Code | ✅ Active | PATH + Windows locations |
-| Windows Terminal | ✅ Active | PATH |
-
-### Planned
-
-| IDE | Sprint | Detection Strategy |
-|-----|--------|-------------------|
-| IntelliJ IDEA | 2+ | Registry + common locations |
-| JetBrains Rider | 2+ | Registry + common locations |
-| Zed Editor | 3+ | Registry + common locations |
-| Neovim | 4+ | PATH |
-| Sublime Text | 4+ | Registry + common locations |
-
----
-
-## Future Enhancements
-
-### Windows Registry Detection
-
-For IntelliJ and JetBrains tools:
-
-```rust
-use winreg::RegKey;
-
-fn detect_jetbrains_ides() -> Vec<InstalledIde> {
-    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-    
-    // Check registry for JetBrains applications
-    if let Ok(key) = hklm.open_subkey("SOFTWARE\\JetBrains\\IntelliJ IDEA") {
-        // Extract installation path from registry
-        // Create InstalledIde instance
-    }
-    
-    // Similar for Rider, CLion, etc.
-}
-```
-
-### macOS Application Bundle Detection
-
-```rust
-fn detect_macos_apps() -> Vec<InstalledIde> {
-    // Check /Applications directory
-    for entry in fs::read_dir("/Applications")? {
-        let path = entry?.path();
-        
-        if path.ends_with("Visual Studio Code.app") {
-            // Found VS Code
-        }
-    }
-}
-```
-
-### Linux Standard Locations
-
-```rust
-fn detect_linux_apps() -> Vec<InstalledIde> {
-    let locations = vec![
-        "/opt",
-        "/usr/local/bin",
-        "/snap/bin",
-        &format!("{}/.local/bin", env::var("HOME").unwrap()),
-    ];
-    
-    for loc in locations {
-        // Scan for known IDE executables
-    }
-}
-```
-
-### IDE Configuration Profiles
-
-Store IDE launch preferences:
-
-```toml
-[[ide_config.vscode]]
-additional_args = ["--disable-extensions"]
-
-[[ide_config.cursor]]
-# Nothing extra
-```
-
-### Project-Specific IDE Override
-
-Store preferred IDE per project:
-
-```toml
-# ~/.config/dev-cli/projects.toml
-[projects.MyProject]
-preferred_ide = "cursor"
-
-[projects.LegacyProject]
-preferred_ide = "vscode"
-```
-
----
-
-## Why Not Store Paths in Config?
-
-### Question
-
-Why not save IDE executable paths in `config.toml`?
-
-```toml
-# Why NOT this?
-[ide_paths]
-vscode = "C:\\Program Files\\Microsoft VS Code\\bin\\code.cmd"
-cursor = "C:\\Program Files\\Cursor\\Cursor.exe"
-```
-
-### Answer
-
-Because executables can **move, uninstall, or update**:
-
-1. **User uninstalls IDE** → Stale path in config
-2. **IDE updates to new location** → Path breaks
-3. **IDE auto-updates** → Might change location
-4. **Multiple installations** → Which one to use?
-5. **Port to new machine** → Paths change
-
-### Our Approach
-
-**Always detect at runtime:**
-- Fresh detection every invocation (milliseconds fast)
-- Automatically finds new installations
-- Automatically removes uninstalled IDEs
-- No stale configuration
-
----
-
-## Performance Characteristics
-
-### Timing
-
-| Operation | Time | Notes |
-|-----------|------|-------|
-| CLI detection (PATH scan) | 10-100ms | Fast, single pass |
-| Windows location checks | 5-20ms | Filesystem checks only |
-| Total detection | 20-150ms | Depends on PATH length |
-| Full command execution | 200-500ms | Mostly IDE startup time |
-
-### Optimization Opportunities
-
-1. **Caching detection results** — Cache for 1 hour, then refresh
-2. **Parallel detection** — Use `rayon` for parallel checks
-3. **Lazy detection** — Only detect IDEs when `dev ide list` is called
-
-Currently not optimized (not needed), but simple to add if performance becomes an issue.
-
----
-
-## Troubleshooting
-
-### IDE Not Detected
-
-```bash
-$ dev ide list
-Installed IDEs:
-✓ VS Code
-```
-
-But Cursor is installed!
-
-**Causes:**
-1. Cursor not in PATH
-2. Cursor not in common Windows location
-3. Custom installation location
-
-**Solutions:**
-```bash
-# Add to PATH manually
-set PATH=%PATH%;C:\Program Files\Cursor
-
-# Or add to config.toml (future feature)
-```
-
-### IDE Detection Finds Duplicate
-
-Example: VS Code found in both PATH and common location.
-
-**Solution:** Automatic deduplication handles this:
-```rust
-if vscode.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Vscode)) {
-    // Already in list, don't add again
-}
-```
-
-### IDE Doesn't Open Project
-
-```bash
-$ dev open MyProject --ide cursor
-# Command executes but IDE doesn't open
-```
-
-**Causes:**
-1. Project path doesn't exist
-2. IDE executable path is wrong
-3. IDE command format is wrong
-
-**Debug:**
-```bash
-# Check project exists
-$ dev project list
-
-# Check IDEs detected
-$ dev ide list
-
-# Try IDE directly
-$ cursor "C:\Users\user\Projects\MyProject"
-```
-
----
+The PATH stage works everywhere. The "common install paths" stage is currently Windows-leaning — that's the primary target — but the structure is the same on macOS and Linux: check `/Applications/*.app`, `/opt`, `~/.local/bin`, `/usr/local/bin`, and so on. Adding those stages is a matter of writing the right `Path::join` per platform.
 
 ## See Also
 
-- [src/ide/](../src/ide/) — IDE system source code
-- [docs/cli-design.md](cli-design.md) — CLI design
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — System architecture
-- [CONTRIBUTING.md](../CONTRIBUTING.md) — Adding new features
+- [src/ide/](../src/ide/) — `detect.rs`, `launcher.rs`, `registry.rs`
+- [docs/configuration.md](configuration.md) — where the default IDE is set
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — where the IDE system sits in the layered design
