@@ -1,30 +1,62 @@
-use dev_cli::config::Config;
+use std::path::PathBuf;
 
-mod common;
-use common::temp_config::test_config;
+use dev_cli::{config::Config, models::ide::Ide};
 
 #[test]
 fn default_config_has_project_root() {
     let config = Config::default();
+
     assert!(!config.projects_root.is_empty());
 }
 
 #[test]
 fn config_round_trip_serialization() {
-    let config = test_config();
+    let config =
+        Config { default_ide: Ide::Cursor, projects_root: vec![PathBuf::from("C:/Projects")] };
 
     let toml = toml::to_string(&config).unwrap();
     let decoded: Config = toml::from_str(&toml).unwrap();
 
-    assert_eq!(config.default_ide, decoded.default_ide);
-    assert_eq!(config.projects_root, decoded.projects_root);
+    assert_eq!(decoded.default_ide, Ide::Cursor);
+    assert_eq!(decoded.projects_root.len(), 1);
+    assert_eq!(decoded.projects_root[0], PathBuf::from("C:/Projects"));
+}
+
+#[test]
+fn config_multiple_roots_round_trip() {
+    let config = Config {
+        default_ide: Ide::Cursor,
+        projects_root: vec![
+            PathBuf::from("C:/Projects"),
+            PathBuf::from("D:/Work"),
+            PathBuf::from("/tmp/dev"),
+        ],
+    };
+
+    let toml = toml::to_string(&config).unwrap();
+    let decoded: Config = toml::from_str(&toml).unwrap();
+
+    assert_eq!(decoded.projects_root.len(), 3);
+    assert_eq!(decoded.projects_root[1], PathBuf::from("D:/Work"));
 }
 
 #[test]
 fn invalid_toml_returns_error() {
-    let bad = r#"
-default_ide = [
+    let bad = "default_ide = 'banana'";
+
+    let parsed = toml::from_str::<Config>(bad);
+
+    assert!(parsed.is_err());
+}
+
+#[test]
+fn empty_project_roots_deserialise() {
+    let toml = r#"
+default_ide = "Cursor"
+projects_root = []
 "#;
 
-    assert!(toml::from_str::<Config>(bad).is_err());
+    let config: Config = toml::from_str(toml).unwrap();
+
+    assert!(config.projects_root.is_empty());
 }

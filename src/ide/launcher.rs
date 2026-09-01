@@ -52,6 +52,36 @@ use crate::{ide::detect::detect_ides, models::ide::Ide};
 /// # }
 /// ```
 pub fn launch(ide: Ide, project: &Path) -> Result<()> {
+    // Test override: bypass IDE detection entirely.
+    if let Ok(test_executable) = std::env::var("DEVCLI_TEST_EXECUTABLE") {
+        match ide {
+            Ide::Claude => {
+                Command::new(&test_executable)
+                    .current_dir(project)
+                    .spawn()
+                    .context("Couldn't start test process")?;
+            }
+
+            Ide::Terminal => {
+                Command::new(&test_executable)
+                    .arg("-d")
+                    .arg(project)
+                    .spawn()
+                    .context("Couldn't start test process")?;
+            }
+
+            _ => {
+                Command::new(&test_executable)
+                    .arg(project)
+                    .spawn()
+                    .context("Couldn't start test process")?;
+            }
+        }
+
+        return Ok(());
+    }
+
+    // Normal application path.
     let installed = detect_ides();
 
     let launcher = installed.iter().find(|i| i.ide == ide);

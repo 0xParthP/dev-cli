@@ -29,7 +29,7 @@ jobs:
 
       # Generate HTML once
       - name: Generate HTML coverage report
-        run: cargo llvm-cov --workspace --all-features --html
+        run: cargo llvm-cov --workspace --exclude xtask --all-features --html
 
       # Upload it immediately before another llvm-cov invocation deletes it.
       - name: Upload HTML coverage report
@@ -41,7 +41,7 @@ jobs:
 
       # Generate LCOV separately.
       - name: Generate LCOV report
-        run: cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info
+        run: cargo llvm-cov --workspace --exclude xtask --all-features --lcov --output-path lcov.info
 
       - name: Upload LCOV report
         uses: actions/upload-artifact@v5

@@ -211,7 +211,7 @@ pub struct Config {
 models/
 ├── mod.rs         # Module exports
 ├── ide.rs         # Ide enum
-└── project.rs     # Project struct (placeholder)
+└── project.rs     # Project struct
 ```
 
 **Typical size:** < 100 lines per file
@@ -242,19 +242,21 @@ models/
 
 ### `src/scanner.rs`
 
-**Responsibility:** Discover Git repositories (currently placeholder)
+**Responsibility:** Discover Git repositories under configured project roots
 
-**Future implementation (Sprint 2+):**
-- Scan directories for .git folders
-- Extract repository metadata
-- Support ignore patterns
+**Implemented (as of Sprint 1.7):**
+- Recursively walks project roots looking for `.git` directories
+- Uses the `ignore` crate's `WalkBuilder` (respects `.gitignore`)
+- Skips `IGNORED_DIRS` (`.git`, `target`, `node_modules`, etc.)
+- Deduplicates repositories by canonical path
+- Returns projects sorted alphabetically by name
 
-**Current state:**
-- Placeholder stub
-- Documented with intended algorithm
+**Not implemented (future Sprint 3+):**
+- Git metadata extraction (branch, status, commits)
 
 **Depends on:**
-- Eventually: `ignore` crate for .gitignore support
+- `ignore` crate for traversal
+- `models::Project`
 
 ---
 
@@ -629,8 +631,8 @@ time dev ide list
 
 ## Version Compatibility
 
-- **Rust Edition:** 2021
-- **MSRV (Minimum Supported Rust Version):** 1.70
+- **Rust Edition:** 2024
+- **MSRV (Minimum Supported Rust Version):** 1.88
 - **Platforms:** Windows (primary), macOS, Linux
 
 **Rule:** Never use nightly features.

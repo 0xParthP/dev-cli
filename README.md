@@ -42,7 +42,7 @@ Fast. Simple. Extensible.
 | Quick project launch | ✅ Active | `dev open <project>` |
 | Configuration management | ✅ Active | TOML-based config |
 | Global installation | ✅ Active | `dev install` |
-| Automatic repository scanning | 🔄 Planned | Sprint 2+ |
+| Automatic repository scanning | ✅ Active | Discovers Git repos under roots |
 | Git integration | 🔄 Planned | Status, branch info |
 | Project templates | 🔄 Planned | Quick scaffolding |
 | Dashboard mode | 🔄 Planned | Interactive TUI |
@@ -180,7 +180,7 @@ After installation, ensure the installation directory is in your PATH. The insta
 ## Building from Source
 
 ### Requirements
-- **Rust 1.70+** (install from [rustup.rs](https://rustup.rs))
+- **Rust 1.88+** (install from [rustup.rs](https://rustup.rs))
 - **Git**
 - **Windows, macOS, or Linux**
 
@@ -261,7 +261,7 @@ dev-cli/
 │   ├── cli.rs            # CLI argument parsing (Clap)
 │   ├── config.rs         # Configuration management
 │   ├── installer.rs      # Installation logic
-│   ├── scanner.rs        # Repository discovery (placeholder)
+│   ├── scanner.rs        # Repository discovery
 │   ├── commands/         # Command implementations
 │   ├── ide/              # IDE detection and launching
 │   └── models/           # Data models
@@ -272,8 +272,7 @@ dev-cli/
 ├── ARCHITECTURE.md       # Architecture and design
 ├── CONTRIBUTING.md       # Contributor guide
 ├── CHANGELOG.md          # Version history
-├── CLAUDE.md             # AI assistant instructions
-└── AGENTS.md             # Agent architecture rules
+└── .claude/              # Agent instructions (CLAUDE.md, AGENTS.md)
 ```
 
 For detailed project structure documentation, see [docs/project-structure.md](docs/project-structure.md).
@@ -355,7 +354,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
 |--------|-------|--------|
 | 1-1.6 | Core CLI, IDE detection, configuration | ✅ Complete |
 | **1.7** | **Complete documentation** | 🚀 **Active** |
-| 2 | Automatic repository scanning | 🔄 Planned |
+| 2 | Automatic repository scanning | ✅ Complete |
 | 3 | Git integration | 🔄 Planned |
 | 4 | Interactive TUI dashboard | 🔄 Planned |
 

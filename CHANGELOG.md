@@ -25,6 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - (none yet for this sprint)
 
+### Added (infrastructure bootstrap)
+- Claude workspace: `.claude/knowledge/` (architecture, modules, testing, conventions, build-system, dependency-map, development-workflow, api, architecture-diagrams) and `.claude/memory/` (decisions, implementation-notes, roadmap, progress, known-bugs, refactors)
+- Specialist agents under `.claude/agents/`: `architect`, `reviewer`, `rust`, `testing`, `performance`, `security`, `documentation`, `refactoring`, `release` (existing `rust-compliance-reviewer` preserved)
+- Skills under `.claude/skills/`: `explain-architecture`, `review-pr`, `generate-tests` (existing `new-cli-command`, `pre-flight` preserved)
+- PostCommit reminder hook in `.claude/settings.json` (existing fmt / unwrap-block hooks preserved)
+- claude-mem memory corpus `dev-cli-corpus` built and primed for semantic recall
+
+### Fixed (infrastructure bootstrap)
+- Stale `edition 2021` / `MSRV 1.70` references in `ARCHITECTURE.md`, `CONTRIBUTING.md`, `README.md`, `docs/*.md`, `docs/book/src/*.md` updated to reflect actual `edition 2024` / `MSRV 1.88`
+- `ARCHITECTURE.md` and `docs/project-structure.md` reconciled with the real module layout (`ide/detect.rs`, `ide/launcher.rs`, `ide/registry.rs`, `utils/path.rs` etc.)
+- Flaky `tests/launcher.rs` race on shared `DEVCLI_TEST_EXECUTABLE` env var — serialised with a static `Mutex` (same pattern as `tests/install.rs`)
+- Removed unused dependencies: `tracing`, `regex` (regular), `assert_fs` (dev-dep)
+
 ---
 
 ## [0.1.0] - 2026
