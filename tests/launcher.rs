@@ -10,10 +10,24 @@ use std::{path::Path, process::Command};
 static LAUNCH_MTX: Mutex<()> = Mutex::new(());
 
 fn fake_executable() -> String {
-    let path: PathBuf = env::temp_dir().join("devcli_fake_launcher.bat");
+    // Choose appropriate script name and content based on OS
+    let (filename, content) = if cfg!(windows) {
+        ("devcli_fake_launcher.bat", "@echo off\r\nexit /b 0\r\n")
+    } else {
+        ("devcli_fake_launcher.sh", "#!/bin/sh\nexit 0\n")
+    };
+    let path: PathBuf = env::temp_dir().join(filename);
 
     if !path.exists() {
-        fs::write(&path, "@echo off\r\nexit /b 0\r\n").expect("failed to create fake launcher");
+        fs::write(&path, content).expect("failed to create fake launcher");
+        // On Unix, make the script executable
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&path).expect("metadata failed").permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&path, perms).expect("failed to set exec permission");
+        }
     }
 
     path.to_string_lossy().into_owned()
