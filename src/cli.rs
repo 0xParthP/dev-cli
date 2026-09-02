@@ -21,6 +21,8 @@ use crate::models::ide::Ide;
 #[command(name = "dev")]
 #[command(version)]
 #[command(about = "Modern Git Project Manager")]
+#[command(long_about = None)]
+#[command(help_template = "\n{about-with-newline} {usage-heading} {usage}\n\n {all-args}\n")]
 pub struct Cli {
     /// The subcommand to execute.
     #[command(subcommand)]
@@ -50,8 +52,6 @@ pub enum Commands {
     Install(InstallCommand),
 
     /// Open a project (shorthand for `project open`).
-    ///
-    /// Usage: `dev open <PROJECT> [--ide CURSOR]`
     Open(OpenArgs),
 }
 
