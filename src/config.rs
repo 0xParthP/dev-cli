@@ -123,8 +123,18 @@ impl Config {
             return Ok(config);
         }
 
-        let text = fs::read_to_string(path)?;
-        Ok(toml::from_str(&text)?)
+        let text = fs::read_to_string(&path).with_context(|| format!("Failed to read config file at {}", path.display()))?;
+        match toml::from_str(&text) {
+            Ok(cfg) => Ok(cfg),
+            Err(e) => {
+                // Log the error context and recreate a default config
+                eprintln!("Config parse error: {}. Recreating default config.", e);
+                let default_cfg = Self::default();
+                // Overwrite the potentially corrupt config file
+                default_cfg.save()?;
+                Ok(default_cfg)
+            }
+        }
     }
 
     /// Save configuration to file.
