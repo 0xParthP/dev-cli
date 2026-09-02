@@ -21,9 +21,9 @@ lint = "clippy --workspace --all-targets --all-features -- -D warnings"
 test-all = "nextest run --workspace --all-features"
 
 # ---------- Coverage ----------
-coverage = "llvm-cov --workspace --all-features --html --open"
-coverage-summary = "llvm-cov --workspace --all-features --summary-only"
-coverage-lcov = "llvm-cov --workspace --all-features --lcov --output-path lcov.info"
+coverage = "llvm-cov --workspace --exclude xtask --all-features --html --open"
+coverage-summary = "llvm-cov --workspace --exclude xtask --all-features --summary-only"
+coverage-lcov = "llvm-cov --workspace --exclude xtask --all-features --lcov --output-path lcov.info"
 coverage-clean = "llvm-cov clean --workspace"
 
 # ---------- Security ----------

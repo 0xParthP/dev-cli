@@ -25,6 +25,7 @@
 //! Fresh detection every invocation ensures accuracy.
 
 use directories::BaseDirs;
+use std::path::Path;
 use which::which;
 
 use crate::{ide::registry::InstalledIde, models::ide::Ide};
@@ -94,7 +95,12 @@ fn detect_cli(list: &mut Vec<InstalledIde>, ide: Ide, name: &str, cmd: &str) {
 /// * `list` — List to append to
 fn detect_common_windows_locations(list: &mut Vec<InstalledIde>) {
     let home = BaseDirs::new().unwrap().home_dir().to_path_buf();
+    detect_common_windows_locations_in(list, &home);
+}
 
+/// Check common Windows installation directories under a given home directory.
+#[doc(hidden)]
+pub fn detect_common_windows_locations_in(list: &mut Vec<InstalledIde>, home: &Path) {
     // VS Code: Standard Windows installation path
     let vscode = home.join("AppData/Local/Programs/Microsoft VS Code/bin/code.cmd");
     if vscode.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Vscode)) {

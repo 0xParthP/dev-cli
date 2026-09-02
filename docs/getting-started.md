@@ -21,7 +21,7 @@ Welcome to `dev-cli`! This guide will help you install, configure, and use the t
 ### Requirements
 
 - **Windows, macOS, or Linux**
-- **Rust 1.70+** (only if building from source)
+- **Rust 1.88+** (only if building from source)
 - **Git** (for development)
 
 ### Option 1: Build from Source (Recommended)

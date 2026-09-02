@@ -1,6 +1,4 @@
 //! Project management command implementation.
-//!
-//! Implements `dev project` subcommands for listing and opening projects.
 
 use anyhow::{Result, bail};
 use owo_colors::OwoColorize;
@@ -9,86 +7,63 @@ use crate::{
     cli::{OpenArgs, ProjectCommand, ProjectSubcommand},
     config::Config,
     ide::launcher,
-    utils::path::display_path,
+    scanner,
 };
 
 /// Execute a project command.
-///
-/// Dispatches to appropriate subcommand handler:
-/// - `list` — List configured project roots.
-/// - `open` — Open a project in an IDE.
-///
-/// # Errors
-///
-/// Returns an error if any command operation fails.
 pub fn execute(cmd: ProjectCommand) -> Result<()> {
     match cmd.command {
-        ProjectSubcommand::List => list(),
+        ProjectSubcommand::List => list_projects(),
         ProjectSubcommand::Open(args) => open(args),
     }
 }
 
-/// Shorthand for opening a project.
-///
-/// Used by `dev open <PROJECT>`, which is equivalent to
-/// `dev project open <PROJECT>`.
-///
-/// # Errors
-///
-/// Returns an error if opening fails.
+/// `dev open <project>` shortcut.
 pub fn open_shortcut(args: OpenArgs) -> Result<()> {
     open(args)
 }
 
-/// List all configured project root directories.
-///
-/// Displays the directories where dev-cli searches for projects.
-///
-/// **Note:** Repository discovery is implemented in `scanner.rs` during Sprint
-/// 2.1, but CLI integration happens in Sprint 2.2.
-///
-/// # Errors
-///
-/// Returns an error if configuration cannot be loaded.
-fn list() -> Result<()> {
+/// List configured roots and discovered Git repositories.
+fn list_projects() -> Result<()> {
     let config = Config::load()?;
 
     println!("{}", "Configured Project Roots".bold());
 
-    for root in config.projects_root {
-        println!("📁 {}", display_path(&root));
+    for root in &config.projects_root {
+        println!("📁 {}", root.display());
+    }
+
+    println!();
+    println!("{}", "Discovered Git Repositories".bold());
+
+    let projects = scanner::discover_projects(&config.projects_root)?;
+
+    if projects.is_empty() {
+        println!("No repositories found.");
+    } else {
+        for project in projects {
+            println!("• {} ({})", project.name, project.path.display());
+        }
     }
 
     Ok(())
 }
 
 /// Open a project in an IDE.
-///
-/// Searches for the project in configured roots and launches it in the
-/// specified IDE. If no IDE is specified, uses the configured default.
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - configuration cannot be loaded,
-/// - the project is not found in any configured root,
-/// - the IDE launcher fails.
 fn open(args: OpenArgs) -> Result<()> {
     let config = Config::load()?;
 
-    for root in config.projects_root {
-        let candidate = root.join(&args.project);
+    let projects = scanner::discover_projects(&config.projects_root)?;
 
-        if candidate.exists() {
-            let ide = args.ide.unwrap_or(config.default_ide);
+    let Some(project) = projects.into_iter().find(|p| p.name == args.project) else {
+        bail!("Project '{}' not found.", args.project);
+    };
 
-            launcher::launch(ide, &candidate)?;
+    let ide = args.ide.unwrap_or(config.default_ide);
 
-            println!("{} {}", "Opened".green(), display_path(&candidate));
+    launcher::launch(ide, &project.path)?;
 
-            return Ok(());
-        }
-    }
+    println!("{} {}", "Opened".green(), project.path.display());
 
-    bail!("Project '{}' not found.", args.project)
+    Ok(())
 }

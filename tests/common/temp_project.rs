@@ -1,32 +1,46 @@
 #![allow(dead_code)]
 
-use std::{fs, path::PathBuf};
+use std::path::{Path, PathBuf};
+
 use tempfile::TempDir;
 
-/// Temporary Git repository used by integration tests.
+/// Temporary workspace containing one or more fake Git repositories.
 ///
-/// This helper is shared across multiple test crates under `tests/`,
-/// so some individual test crates won't use every method.
+/// Used by integration tests for the scanner and project commands.
 pub struct TempProject {
-    dir: TempDir,
-    repo: PathBuf,
+    root: TempDir,
 }
 
 impl TempProject {
-    pub fn new(name: &str) -> Self {
-        let dir = TempDir::new().unwrap();
-        let repo = dir.path().join(name);
-
-        fs::create_dir_all(repo.join(".git")).unwrap();
-
-        Self { dir, repo }
+    /// Creates a temporary workspace.
+    pub fn new(_name: &str) -> Self {
+        Self { root: tempfile::tempdir().unwrap() }
     }
 
+    /// Returns the workspace root.
     pub fn root(&self) -> PathBuf {
-        self.dir.path().to_path_buf()
+        self.root.path().to_path_buf()
     }
 
-    pub fn path(&self) -> PathBuf {
-        self.repo.clone()
+    /// Creates a fake Git repository inside the workspace.
+    ///
+    /// This creates:
+    ///
+    /// ```text
+    /// workspace/
+    /// └── <name>/
+    ///     └── .git/
+    /// ```
+    pub fn create_git_repo(&self, name: &str) -> PathBuf {
+        let repo = self.root.path().join(name);
+
+        std::fs::create_dir_all(repo.join(".git")).unwrap();
+
+        repo
+    }
+
+    /// Returns the workspace path.
+    pub fn path(&self) -> &Path {
+        self.root.path()
     }
 }

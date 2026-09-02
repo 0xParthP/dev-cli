@@ -104,14 +104,24 @@ fn coverage_step(minimum: f64) -> Result<()> {
         if line.starts_with("TOTAL") {
             let columns: Vec<_> = line.split_whitespace().collect();
 
-            line_coverage = columns[8].trim_end_matches('%').parse::<f64>().unwrap_or(0.0);
+            // cargo llvm-cov summary format:
+            // TOTAL regions missed_regions region% functions missed_functions function%
+            //       lines missed_lines line%
 
-            let function = columns[5];
-            let region = columns[2];
+            let region_coverage = columns[3].trim_end_matches('%').parse::<f64>().unwrap_or(0.0);
 
-            println!("Functions : {}%", function.green());
-            println!("Regions   : {}%", region.green());
-            println!("Lines     : {}%", columns[8].green());
+            let function_coverage = columns[6].trim_end_matches('%').parse::<f64>().unwrap_or(0.0);
+
+            let line_coverage_value =
+                columns[9].trim_end_matches('%').parse::<f64>().unwrap_or(0.0);
+
+            line_coverage = line_coverage_value;
+
+            println!("Functions : {:.2}%", function_coverage);
+            println!("Regions   : {:.2}%", region_coverage);
+            println!("Lines     : {:.2}%", line_coverage_value);
+
+            break;
         }
     }
 

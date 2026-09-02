@@ -7,7 +7,7 @@ Instructions for AI coding assistants (Claude, GitHub Copilot, etc.) working wit
 ## Quick Reference
 
 - **Project:** `dev-cli` — A developer project manager CLI written in Rust
-- **Language:** Rust (2021 edition)
+- **Language:** Rust (2024 edition)
 - **Paradigm:** Layered architecture with clear separation of concerns
 - **Status:** Active development (Sprint 1.7 - Documentation Pass)
 
@@ -70,7 +70,7 @@ Instructions for AI coding assistants (Claude, GitHub Copilot, etc.) working wit
 | `src/config.rs` | Configuration management |
 | `src/ide/` | IDE detection & launching |
 | `src/models/` | Data structures |
-| `src/scanner.rs` | Repository discovery (placeholder) |
+| `src/scanner.rs` | Repository discovery |
 | `src/installer.rs` | Installation logic |
 | `tests/` | Integration tests |
 | `docs/` | User and developer guides |
@@ -84,7 +84,7 @@ Instructions for AI coding assistants (Claude, GitHub Copilot, etc.) working wit
 | `Config` | config.rs | User configuration |
 | `Ide` | models/ide.rs | Supported IDE enum |
 | `InstalledIde` | ide/registry.rs | Detected IDE info |
-| `Project` | models/project.rs | Project metadata (placeholder) |
+| `Project` | models/project.rs | Project metadata (name + path) |
 
 ---
 

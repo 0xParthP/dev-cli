@@ -90,6 +90,13 @@ impl Config {
     ///
     /// Returns error if platform directories cannot be located.
     pub fn path() -> Result<PathBuf> {
+        // Check for test override first.
+        // `DEVCLI_CONFIG_DIR` lets integration tests point the config at a
+        // temporary directory instead of the real platform config location.
+        if let Ok(test_dir) = std::env::var("DEVCLI_CONFIG_DIR") {
+            return Ok(PathBuf::from(test_dir).join("config.toml"));
+        }
+
         let proj =
             ProjectDirs::from("", "", "dev-cli").context("Couldn't locate config directory")?;
 
