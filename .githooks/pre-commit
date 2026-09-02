@@ -5,19 +5,31 @@ set -e
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
 
 # Allow main branch
-if [[ "$BRANCH_NAME" != "main" && "$BRANCH_NAME" != feature/* ]]; then
-    echo ""
-    echo "❌ Invalid branch name: $BRANCH_NAME"
-    echo ""
-    echo "Branches must be named:"
-    echo "  feature/<short-description>"
-    echo ""
-    echo "Examples:"
-    echo "  feature/repository-scanner"
-    echo "  feature/ide-detection"
-    echo "  feature/testing-improvements"
-    echo ""
-    exit 1
+if [[ "$BRANCH_NAME" != "main" ]]; then
+    PATTERN='^(feature|fix|docs|refactor|chore)/[a-z0-9]+(-[a-z0-9]+)*$'
+    if [[ ! "$BRANCH_NAME" =~ $PATTERN ]]; then
+        echo ""
+        echo "❌ Invalid branch name: $BRANCH_NAME"
+        echo ""
+        echo "Allowed branch prefixes:"
+        echo "  feature/<feature-name>"
+        echo "  fix/<bug-name>"
+        echo "  docs/<doc-name>"
+        echo "  refactor/<area>"
+        echo "  chore/<maintenance>"
+        echo ""
+        echo "Examples:"
+        echo "  feature/repository-scanner"
+        echo "  feature/ide-detection"
+        echo "  feature/testing-improvements"
+        echo ""
+        exit 1
+    fi
+fi
+        echo "  chore/update-dependencies"
+        echo ""
+        exit 1
+    fi
 fi
 
 echo "✅ Branch name OK: $BRANCH_NAME"

@@ -26,15 +26,26 @@ jobs:
             exit 0
           fi
 
-          PATTERN='^feature/[a-z0-9]+(-[a-z0-9]+)*$'
+          PATTERN='^(feature|fix|docs|refactor|chore)/[a-z0-9]+(-[a-z0-9]+)*$'
 
           if [[ ! "$BRANCH" =~ $PATTERN ]]; then
             echo "❌ Invalid branch name."
             echo
-            echo "Expected:"
+            echo "Allowed branch prefixes:"
+            echo "  feature/<feature-name>"
+            echo "  fix/<bug-name>"
+            echo "  docs/<doc-name>"
+            echo "  refactor/<area>"
+            echo "  chore/<maintenance>"
+            echo
+            echo "Examples:"
             echo "  feature/repository-scanner"
             echo "  feature/ide-detection"
-            echo "  feature/cache-index"
+            echo "  feature/testing-improvements"
+            echo "  fix/ide-detection-crash"
+            echo "  docs/update-readme"
+            echo "  refactor/config-module"
+            echo "  chore/update-dependencies"
             exit 1
           fi
 

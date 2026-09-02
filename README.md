@@ -237,7 +237,7 @@ For detailed development instructions, see [CONTRIBUTING.md](CONTRIBUTING.md).
 ### Quick Development
 
 1. **Fork and clone** the repository
-2. **Create a feature branch** — `git checkout -b feat/my-feature`
+2. **Create a feature branch** — `git checkout -b feature/my-feature`
 3. **Make changes** and **add tests**
 4. **Run tests and format** — `cargo test && cargo fmt && cargo clippy`
 5. **Commit with a clear message** — follow conventional commits

@@ -24,7 +24,7 @@ cargo test
 ### Branch Naming
 
 ```
-feat/<feature-name>     # New feature
+feature/<feature-name>     # New feature
 fix/<bug-name>          # Bug fix
 docs/<doc-name>         # Documentation
 refactor/<area>         # Code refactor
@@ -53,7 +53,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 <footer>
 ```
 
-Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`. Subject is lowercase, imperative mood, max 50 characters, no trailing period.
+Types: `feature`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`. Subject is lowercase, imperative mood, max 50 characters, no trailing period.
 
 ## Code Standards
 
