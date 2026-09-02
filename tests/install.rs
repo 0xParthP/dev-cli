@@ -1,24 +1,16 @@
 use dev_cli::installer;
-use std::sync::Mutex;
+use serial_test::serial;
 use tempfile::TempDir;
 
-/// Serialises all install tests so that concurrent `set_var` / `remove_var`
-/// calls on `DEVCLI_INSTALL_DIR` cannot race each other.
-static INSTALL_MTX: Mutex<()> = Mutex::new(());
-
 /// Helper that gives the installer an isolated install directory.
-///
-/// Returns both the `TempDir` (keeps the directory alive) and a `MutexGuard`
-/// that prevents other install tests from running concurrently.
-fn with_temp_install_dir() -> (TempDir, std::sync::MutexGuard<'static, ()>) {
-    let guard = INSTALL_MTX.lock().unwrap();
+fn with_temp_install_dir() -> TempDir {
     let temp = TempDir::new().unwrap();
 
     unsafe {
         std::env::set_var("DEVCLI_INSTALL_DIR", temp.path());
     }
 
-    (temp, guard)
+    temp
 }
 
 fn cleanup() {
@@ -28,8 +20,9 @@ fn cleanup() {
 }
 
 #[test]
+#[serial]
 fn install_location_exists() {
-    let (temp, _guard) = with_temp_install_dir();
+    let temp = with_temp_install_dir();
 
     let dir = installer::binary_install_dir().unwrap();
     assert_eq!(dir, temp.path());
@@ -38,8 +31,9 @@ fn install_location_exists() {
 }
 
 #[test]
+#[serial]
 fn install_returns_success() {
-    let (temp, _guard) = with_temp_install_dir();
+    let temp = with_temp_install_dir();
 
     let result = installer::install();
     assert!(result.is_ok());
@@ -52,8 +46,9 @@ fn install_returns_success() {
 }
 
 #[test]
+#[serial]
 fn install_is_idempotent() {
-    let (temp, _guard) = with_temp_install_dir();
+    let temp = with_temp_install_dir();
 
     installer::install().unwrap();
     let second = installer::install();

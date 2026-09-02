@@ -1,26 +1,12 @@
 mod common;
 
-use std::sync::Mutex;
-
 use assert_cmd::Command;
 use common::assertions::contains_usage;
 use predicates::prelude::*;
+use serial_test::serial;
 use tempfile::TempDir;
 
-/// Serialise tests that override the platform config directory
-/// (`APPDATA` / `XDG_CONFIG_HOME` / `HOME`) so concurrent `set_var` /
-/// `remove_var` calls do not race.
-static CFG_ENV_MTX: Mutex<()> = Mutex::new(());
-
 /// Create a temporary isolated configuration directory.
-///
-/// Returning a single `TempDir` and threading it through every command
-/// is intentional: the previous version of this test created a fresh
-/// `TempDir` per call, so `init`, `set-default-ide`, and `show` each ran
-/// against a *different* empty directory. The "set" would write to one
-/// dir, the "show" would read from another (auto-creating defaults —
-/// hence `Vscode`), and the test only "passed" by accident when GC had
-/// not yet reaped the first temp dir. Reuse one dir for the whole test.
 fn isolated_temp_dir() -> TempDir {
     TempDir::new().expect("create temp dir")
 }
@@ -73,8 +59,8 @@ fn config_help_runs() {
 }
 
 #[test]
+#[serial]
 fn config_set_default_ide_persists() {
-    let _guard = CFG_ENV_MTX.lock().unwrap();
     let tmp = isolated_temp_dir();
 
     isolated_cmd(&tmp).args(["config", "init"]).assert().success();

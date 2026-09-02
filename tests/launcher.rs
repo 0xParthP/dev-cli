@@ -1,19 +1,10 @@
 use dev_cli::{ide::launcher, models::ide::Ide};
+use serial_test::serial;
 use std::path::PathBuf;
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::{env, fs};
 use std::{path::Path, process::Command};
 
-/// Serialises all launcher tests so that concurrent `set_var` / `remove_var`
-/// calls on `DEVCLI_TEST_EXECUTABLE` cannot race each other.
-/// (Same pattern as `tests/install.rs`.)
-static LAUNCH_MTX: Mutex<()> = Mutex::new(());
-
-/// Counter used to mint a unique fake-executable path per test invocation.
-/// Each test gets its own script so a concurrent `exec` and a concurrent
-/// `write` can never target the same inode (which would raise `ETXTBSY`
-/// on Linux while another process is mid-`execve`).
 static FAKE_EXE_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 fn fake_executable() -> String {
@@ -24,9 +15,9 @@ fn fake_executable() -> String {
         ("sh", "#!/bin/sh\nexit 0\n")
     };
 
-    // Each call mints a fresh, unique path so parallel tests cannot
-    // collide on the same inode. pid + counter guarantees uniqueness
-    // even if multiple threads invoke this concurrently.
+    // Each call mints a fresh, unique path so a run of serial tests cannot
+    // collide on the same inode. pid + counter guarantees uniqueness even
+    // if `cargo test` is re-run with stale files lying around.
     let n = FAKE_EXE_COUNTER.fetch_add(1, Ordering::Relaxed);
     let path: PathBuf =
         env::temp_dir().join(format!("devcli_fake_launcher.{}.{n}.{suffix}", std::process::id()));
@@ -46,9 +37,8 @@ fn fake_executable() -> String {
 }
 
 #[test]
+#[serial]
 fn launch_cursor_uses_test_executable() {
-    let _guard = LAUNCH_MTX.lock().unwrap();
-
     unsafe {
         std::env::set_var("DEVCLI_TEST_EXECUTABLE", fake_executable());
     }
@@ -62,9 +52,8 @@ fn launch_cursor_uses_test_executable() {
 }
 
 #[test]
+#[serial]
 fn launch_terminal_uses_test_executable() {
-    let _guard = LAUNCH_MTX.lock().unwrap();
-
     unsafe {
         std::env::set_var("DEVCLI_TEST_EXECUTABLE", fake_executable());
     }
@@ -78,9 +67,8 @@ fn launch_terminal_uses_test_executable() {
 }
 
 #[test]
+#[serial]
 fn launch_claude_uses_test_executable() {
-    let _guard = LAUNCH_MTX.lock().unwrap();
-
     unsafe {
         std::env::set_var("DEVCLI_TEST_EXECUTABLE", fake_executable());
     }
@@ -94,9 +82,8 @@ fn launch_claude_uses_test_executable() {
 }
 
 #[test]
+#[serial]
 fn launch_fails_when_executable_is_invalid() {
-    let _guard = LAUNCH_MTX.lock().unwrap();
-
     unsafe {
         std::env::set_var("DEVCLI_TEST_EXECUTABLE", "definitely-not-a-real-executable");
     }
@@ -110,6 +97,7 @@ fn launch_fails_when_executable_is_invalid() {
 }
 
 #[test]
+#[serial]
 fn fake_executable_runs_successfully() {
     let mut cmd = Command::new(fake_executable());
 
@@ -123,9 +111,8 @@ fn fake_executable_runs_successfully() {
 }
 
 #[test]
+#[serial]
 fn launch_idea_not_installed_returns_error() {
-    let _guard = LAUNCH_MTX.lock().unwrap();
-
     // Ensure no test executable is set
     unsafe {
         env::remove_var("DEVCLI_TEST_EXECUTABLE");
@@ -141,9 +128,8 @@ fn launch_idea_not_installed_returns_error() {
 }
 
 #[test]
+#[serial]
 fn launch_spawn_claude() {
-    let _guard = LAUNCH_MTX.lock().unwrap();
-
     unsafe {
         env::remove_var("DEVCLI_TEST_EXECUTABLE");
     }
@@ -154,9 +140,8 @@ fn launch_spawn_claude() {
 }
 
 #[test]
+#[serial]
 fn launch_spawn_terminal() {
-    let _guard = LAUNCH_MTX.lock().unwrap();
-
     unsafe {
         env::remove_var("DEVCLI_TEST_EXECUTABLE");
     }
@@ -167,9 +152,8 @@ fn launch_spawn_terminal() {
 }
 
 #[test]
+#[serial]
 fn launch_spawn_vscode() {
-    let _guard = LAUNCH_MTX.lock().unwrap();
-
     unsafe {
         env::remove_var("DEVCLI_TEST_EXECUTABLE");
     }
@@ -180,9 +164,8 @@ fn launch_spawn_vscode() {
 }
 
 #[test]
+#[serial]
 fn launch_spawn_cursor() {
-    let _guard = LAUNCH_MTX.lock().unwrap();
-
     unsafe {
         env::remove_var("DEVCLI_TEST_EXECUTABLE");
     }

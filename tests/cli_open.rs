@@ -1,22 +1,15 @@
 mod common;
 
-use std::sync::Mutex;
-
 use assert_cmd::Command;
 use predicates::prelude::*;
+use serial_test::serial;
 use tempfile::TempDir;
 
 #[cfg(unix)]
 use common::temp_project::TempProject;
 
-/// Serialise tests that override the platform config directory
-/// (`APPDATA` / `XDG_CONFIG_HOME` / `HOME`) so concurrent `set_var` /
-/// `remove_var` calls do not race.
-static OPEN_ENV_MTX: Mutex<()> = Mutex::new(());
-
 /// Build a `dev` command that points the platform config directory at an
-/// isolated temp dir. Returns the `Command` and a `TempDir` guard that
-/// must be kept alive for the test's duration.
+/// isolated temp dir.
 fn dev_cmd_isolated() -> (Command, TempDir) {
     let tmp = TempDir::new().expect("create temp dir");
     let dir_str = tmp.path().to_string_lossy().into_owned();
@@ -63,8 +56,8 @@ fn open_with_specific_ide_parses() {
 }
 
 #[test]
+#[serial]
 fn project_list_runs() {
-    let _guard = OPEN_ENV_MTX.lock().unwrap();
     let (mut cmd, _tmp) = dev_cmd_isolated();
 
     cmd.args(["project", "list"])
@@ -73,17 +66,11 @@ fn project_list_runs() {
         .stdout(predicate::str::contains("Configured Project Roots"));
 }
 
-/// The `dev open <project>` happy path requires controlling the platform
-/// config directory so the `projects_root` matches the test fixture.
-/// On Linux this is `$XDG_CONFIG_HOME` / `$HOME`, which we can set from
-/// the test runner. On Windows the `directories` crate uses the Win32
-/// `SHGetKnownFolderPath` API and does not honour `APPDATA` / `LOCALAPPDATA`,
-/// so this test is Unix-only.
+/// UNIX only test that creates a fake project and a fake executable to test the `dev open` command.
 #[cfg(unix)]
 #[test]
+#[serial]
 fn open_existing_project_with_test_executable() {
-    let _guard = OPEN_ENV_MTX.lock().unwrap();
-
     // Create a fake project at <root>/MyProject/.git
     let repo = TempProject::new("MyProject");
     repo.create_git_repo("MyProject");
@@ -93,15 +80,9 @@ fn open_existing_project_with_test_executable() {
     let dir_str = tmp.path().to_string_lossy().into_owned();
 
     // Point the config at the temp project root.
-    // The platform config path is `<XDG_CONFIG_HOME>/dev-cli/config.toml`.
     let config_path = tmp.path().join("dev-cli").join("config.toml");
     std::fs::create_dir_all(config_path.parent().unwrap()).unwrap();
     let projects_root_str = repo.root().to_string_lossy().into_owned();
-    // `default_ide` is parsed by serde with PascalCase rename, so
-    // "Vscode" not "vscode" — using lowercase triggers a TOML parse
-    // error which fails this test and, because the assert panics while
-    // `OPEN_ENV_MTX` is held, also poisons the mutex and cascades into
-    // `project_list_runs` as a PoisonError. Keep the casing right.
     let config_toml =
         format!("projects_root = [\"{projects_root_str}\"]\ndefault_ide = \"Vscode\"\n");
     std::fs::write(&config_path, config_toml).unwrap();

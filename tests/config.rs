@@ -1,18 +1,11 @@
-use std::path::PathBuf;
-use std::sync::Mutex;
-
 use dev_cli::{config::Config, models::ide::Ide};
+use serial_test::serial;
+use std::path::PathBuf;
 
 mod common;
 use common::temp_config::test_config;
 
-/// Serialise tests that mutate the config directory location so that
-/// `set_var` / `remove_var` calls on `DEVCLI_CONFIG_DIR` do not race with
-/// other config tests running in parallel.
-static CFG_MTX: Mutex<()> = Mutex::new(());
-
-/// Helper to point the config directory at an isolated temp dir using
-/// the `DEVCLI_CONFIG_DIR` test override.
+/// Helper to point the config directory at an isolated temp dir
 fn isolate_config_dir() -> (tempfile::TempDir, std::path::PathBuf) {
     let tmp = tempfile::TempDir::new().expect("create temp dir");
     let dir = tmp.path().to_path_buf();
@@ -89,8 +82,8 @@ projects_root = []
 }
 
 #[test]
+#[serial]
 fn load_creates_defaults_when_file_missing() {
-    let _guard = CFG_MTX.lock().unwrap();
     let (_tmp, _dir) = isolate_config_dir();
 
     // Make sure the config file does not exist.
@@ -110,8 +103,8 @@ fn load_creates_defaults_when_file_missing() {
 }
 
 #[test]
+#[serial]
 fn save_creates_parent_directory_when_missing() {
-    let _guard = CFG_MTX.lock().unwrap();
     let (_tmp, _dir) = isolate_config_dir();
 
     // Make sure the parent directory does not exist before saving.
