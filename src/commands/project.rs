@@ -8,6 +8,7 @@ use crate::{
     config::Config,
     ide::launcher,
     scanner,
+    utils::path::display_path,
 };
 
 /// Execute a project command.
@@ -42,7 +43,7 @@ fn list_projects() -> Result<()> {
         println!("No repositories found.");
     } else {
         for project in projects {
-            println!("• {} ({})", project.name, project.path.display());
+            println!("• {} ({})", project.name, display_path(&project.path));
         }
     }
 
