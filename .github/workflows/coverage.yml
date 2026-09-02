@@ -65,13 +65,24 @@ jobs:
       - name: Enforce minimum line coverage
         shell: bash
         run: |
-          LINE_COVERAGE=$(grep "^TOTAL" coverage-summary.txt | awk '{print $9}' | tr -d '%')
+          # Column layout of the `cargo coverage-summary` table for the
+          # TOTAL row is:
+          #   1 TOTAL
+          #   2 Regions   3 Missed Regions   4 Cover
+          #   5 Functions 6 Missed Functions 7 Executed
+          #   8 Lines     9 Missed Lines    10 Cover        <-- line coverage %
+          #  11 Branches 12 Missed Branches 13 Cover
+          # The previous script read $9, which is "Missed Lines" (a small
+          # integer), so the threshold was effectively comparing "lines we
+          # failed to hit" against 80% and the gate only ever passed by
+          # accident. Read $10 (line Cover %) instead.
+          LINE_COVERAGE=$(grep "^TOTAL" coverage-summary.txt | awk '{print $10}' | tr -d '%')
 
           echo "Line coverage: ${LINE_COVERAGE}%"
 
           awk -v cov="$LINE_COVERAGE" 'BEGIN {
-            if (cov < 80.0) {
-              printf("Coverage %.2f%% is below required 80%%\n", cov);
+            if (cov + 0 < 80.0) {
+              printf("Coverage %.2f%% is below required 80%%\n", cov + 0);
               exit 1;
             }
           }'
