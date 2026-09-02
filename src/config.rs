@@ -123,7 +123,8 @@ impl Config {
             return Ok(config);
         }
 
-        let text = fs::read_to_string(&path).with_context(|| format!("Failed to read config file at {}", path.display()))?;
+        let text = fs::read_to_string(&path)
+            .with_context(|| format!("Failed to read config file at {}", path.display()))?;
         match toml::from_str(&text) {
             Ok(cfg) => Ok(cfg),
             Err(e) => {
