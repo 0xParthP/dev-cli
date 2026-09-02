@@ -10,3 +10,5 @@ lcov.info
 .claude/worktrees/
 graphify-out/*
 .serena/
+.vscode/
+.scannerwork/
