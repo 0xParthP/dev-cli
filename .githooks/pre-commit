@@ -22,10 +22,6 @@ if [[ "$BRANCH_NAME" != "main" ]]; then
         echo "  feature/repository-scanner"
         echo "  feature/ide-detection"
         echo "  feature/testing-improvements"
-        echo ""
-        exit 1
-    fi
-fi
         echo "  chore/update-dependencies"
         echo ""
         exit 1
