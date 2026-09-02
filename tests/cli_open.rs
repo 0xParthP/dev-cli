@@ -97,8 +97,13 @@ fn open_existing_project_with_test_executable() {
     let config_path = tmp.path().join("dev-cli").join("config.toml");
     std::fs::create_dir_all(config_path.parent().unwrap()).unwrap();
     let projects_root_str = repo.root().to_string_lossy().into_owned();
+    // `default_ide` is parsed by serde with PascalCase rename, so
+    // "Vscode" not "vscode" — using lowercase triggers a TOML parse
+    // error which fails this test and, because the assert panics while
+    // `OPEN_ENV_MTX` is held, also poisons the mutex and cascades into
+    // `project_list_runs` as a PoisonError. Keep the casing right.
     let config_toml =
-        format!("projects_root = [\"{projects_root_str}\"]\ndefault_ide = \"vscode\"\n");
+        format!("projects_root = [\"{projects_root_str}\"]\ndefault_ide = \"Vscode\"\n");
     std::fs::write(&config_path, config_toml).unwrap();
 
     // Create a fake executable for the test.
