@@ -1,22 +1,25 @@
-name: Coverage
+name: Coverage & SonarQube Analysis
 
 on:
-  pull_request:
   push:
-    branches:
-      - main
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   coverage:
-    name: LLVM Coverage
+    name: LLVM Coverage + SonarCloud
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -27,11 +30,14 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
-      # Generate HTML once
-      - name: Generate HTML coverage report
-        run: cargo llvm-cov --workspace --exclude xtask --all-features --html
+      # Run tests once and keep coverage data.
+      - name: Run coverage instrumentation
+        run: cargo llvm-cov --workspace --exclude xtask --all-features --no-report
 
-      # Upload it immediately before another llvm-cov invocation deletes it.
+      # HTML report.
+      - name: Generate HTML coverage report
+        run: cargo llvm-cov report --html
+
       - name: Upload HTML coverage report
         uses: actions/upload-artifact@v5
         with:
@@ -39,9 +45,9 @@ jobs:
           path: target/llvm-cov/html
           if-no-files-found: error
 
-      # Generate LCOV separately.
+      # LCOV report for SonarCloud.
       - name: Generate LCOV report
-        run: cargo llvm-cov --workspace --exclude xtask --all-features --lcov --output-path lcov.info
+        run: cargo llvm-cov report --lcov --output-path lcov.info
 
       - name: Upload LCOV report
         uses: actions/upload-artifact@v5
@@ -50,6 +56,7 @@ jobs:
           path: lcov.info
           if-no-files-found: error
 
+      # Markdown coverage summary.
       - name: Generate coverage summary
         run: cargo coverage-summary > coverage-summary.txt
 
@@ -62,6 +69,7 @@ jobs:
             cat coverage-summary.txt
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Fail PRs below 80% line coverage.
       - name: Enforce minimum line coverage
         shell: bash
         run: |
@@ -75,3 +83,9 @@ jobs:
               exit 1;
             }
           }'
+
+      # Upload analysis + coverage to SonarCloud.
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
