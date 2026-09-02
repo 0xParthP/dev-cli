@@ -73,3 +73,19 @@ fn duplicate_roots_do_not_duplicate_projects() {
     assert_eq!(projects.len(), 1);
     assert_eq!(projects[0].name, "shared");
 }
+
+#[test]
+fn non_existent_root_is_skipped() {
+    // Build a path under a never-created parent so the path is guaranteed
+    // not to exist on disk without us having to manage TempDir close().
+    let missing = std::env::temp_dir().join("devcli-nonexistent-root-zzz-does-not-exist");
+
+    // Combine a missing root with a real one to confirm the missing one
+    // is silently skipped instead of aborting the whole scan.
+    let real = TempProject::new("workspace");
+    real.create_git_repo("real");
+    let projects = discover_projects(&[missing, real.root()]).unwrap();
+
+    assert_eq!(projects.len(), 1);
+    assert_eq!(projects[0].name, "real");
+}

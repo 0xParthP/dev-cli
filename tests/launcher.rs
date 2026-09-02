@@ -121,3 +121,73 @@ fn fake_executable_runs_successfully() {
 
     assert!(status.success());
 }
+
+#[test]
+fn launch_idea_not_installed_returns_error() {
+    let _guard = LAUNCH_MTX.lock().unwrap();
+
+    // Ensure no test executable is set
+    unsafe {
+        env::remove_var("DEVCLI_TEST_EXECUTABLE");
+    }
+
+    // Ide::Idea is never detected by detect_ides(), so this should fail
+    let result = launcher::launch(Ide::Idea, Path::new("."));
+    assert!(result.is_err());
+
+    // Check that it's the "not installed" error
+    let err = result.unwrap_err();
+    assert!(err.to_string().contains("Idea is not installed"));
+}
+
+#[test]
+fn launch_spawn_claude() {
+    let _guard = LAUNCH_MTX.lock().unwrap();
+
+    unsafe {
+        env::remove_var("DEVCLI_TEST_EXECUTABLE");
+    }
+
+    let executable = fake_executable();
+    let result = launcher::launch_spawn(Ide::Claude, Path::new("."), Path::new(&executable));
+    assert!(result.is_ok());
+}
+
+#[test]
+fn launch_spawn_terminal() {
+    let _guard = LAUNCH_MTX.lock().unwrap();
+
+    unsafe {
+        env::remove_var("DEVCLI_TEST_EXECUTABLE");
+    }
+
+    let executable = fake_executable();
+    let result = launcher::launch_spawn(Ide::Terminal, Path::new("."), Path::new(&executable));
+    assert!(result.is_ok());
+}
+
+#[test]
+fn launch_spawn_vscode() {
+    let _guard = LAUNCH_MTX.lock().unwrap();
+
+    unsafe {
+        env::remove_var("DEVCLI_TEST_EXECUTABLE");
+    }
+
+    let executable = fake_executable();
+    let result = launcher::launch_spawn(Ide::Vscode, Path::new("."), Path::new(&executable));
+    assert!(result.is_ok());
+}
+
+#[test]
+fn launch_spawn_cursor() {
+    let _guard = LAUNCH_MTX.lock().unwrap();
+
+    unsafe {
+        env::remove_var("DEVCLI_TEST_EXECUTABLE");
+    }
+
+    let executable = fake_executable();
+    let result = launcher::launch_spawn(Ide::Cursor, Path::new("."), Path::new(&executable));
+    assert!(result.is_ok());
+}

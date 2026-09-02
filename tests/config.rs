@@ -1,6 +1,33 @@
 use std::path::PathBuf;
+use std::sync::Mutex;
 
 use dev_cli::{config::Config, models::ide::Ide};
+
+mod common;
+use common::temp_config::test_config;
+
+/// Serialise tests that mutate the config directory location so that
+/// `set_var` / `remove_var` calls on `DEVCLI_CONFIG_DIR` do not race with
+/// other config tests running in parallel.
+static CFG_MTX: Mutex<()> = Mutex::new(());
+
+/// Helper to point the config directory at an isolated temp dir using
+/// the `DEVCLI_CONFIG_DIR` test override.
+fn isolate_config_dir() -> (tempfile::TempDir, std::path::PathBuf) {
+    let tmp = tempfile::TempDir::new().expect("create temp dir");
+    let dir = tmp.path().to_path_buf();
+    let dir_str = dir.to_string_lossy().into_owned();
+    unsafe {
+        std::env::set_var("DEVCLI_CONFIG_DIR", &dir_str);
+    }
+    (tmp, dir)
+}
+
+fn reset_config_dir_env() {
+    unsafe {
+        std::env::remove_var("DEVCLI_CONFIG_DIR");
+    }
+}
 
 #[test]
 fn default_config_has_project_root() {
@@ -59,4 +86,47 @@ projects_root = []
     let config: Config = toml::from_str(toml).unwrap();
 
     assert!(config.projects_root.is_empty());
+}
+
+#[test]
+fn load_creates_defaults_when_file_missing() {
+    let _guard = CFG_MTX.lock().unwrap();
+    let (_tmp, _dir) = isolate_config_dir();
+
+    // Make sure the config file does not exist.
+    let path = Config::path().expect("config path");
+    if path.exists() {
+        std::fs::remove_file(&path).expect("remove existing config");
+    }
+
+    let config = Config::load().expect("load should succeed");
+    assert!(!config.projects_root.is_empty());
+    assert_eq!(config.default_ide, Ide::Vscode);
+
+    // Load should have persisted the defaults.
+    assert!(path.exists(), "load() should create the config file when missing");
+
+    reset_config_dir_env();
+}
+
+#[test]
+fn save_creates_parent_directory_when_missing() {
+    let _guard = CFG_MTX.lock().unwrap();
+    let (_tmp, _dir) = isolate_config_dir();
+
+    // Make sure the parent directory does not exist before saving.
+    let path = Config::path().expect("config path");
+    if let Some(parent) = path.parent()
+        && parent.exists()
+    {
+        std::fs::remove_dir_all(parent).expect("remove existing config dir");
+    }
+    assert!(!path.exists());
+
+    let config = test_config();
+    config.save().expect("save should succeed");
+
+    assert!(path.exists(), "save() should create the config file");
+
+    reset_config_dir_env();
 }

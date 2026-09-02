@@ -54,31 +54,7 @@ use crate::{ide::detect::detect_ides, models::ide::Ide};
 pub fn launch(ide: Ide, project: &Path) -> Result<()> {
     // Test override: bypass IDE detection entirely.
     if let Ok(test_executable) = std::env::var("DEVCLI_TEST_EXECUTABLE") {
-        match ide {
-            Ide::Claude => {
-                Command::new(&test_executable)
-                    .current_dir(project)
-                    .spawn()
-                    .context("Couldn't start test process")?;
-            }
-
-            Ide::Terminal => {
-                Command::new(&test_executable)
-                    .arg("-d")
-                    .arg(project)
-                    .spawn()
-                    .context("Couldn't start test process")?;
-            }
-
-            _ => {
-                Command::new(&test_executable)
-                    .arg(project)
-                    .spawn()
-                    .context("Couldn't start test process")?;
-            }
-        }
-
-        return Ok(());
+        return launch_spawn(ide, project, Path::new(&test_executable));
     }
 
     // Normal application path.
@@ -90,29 +66,34 @@ pub fn launch(ide: Ide, project: &Path) -> Result<()> {
         bail!("{:?} is not installed.", ide);
     };
 
+    launch_spawn(ide, project, &launcher.executable)
+}
+
+/// Helper used to spawn an IDE process with a specific executable path.
+///
+/// Exists to share the per-IDE CLI semantics (Claude uses `current_dir`,
+/// Terminal uses `-d`, others pass the project as a positional arg) between
+/// the test override path and the normal application path, so both are
+/// covered by the same test suite.
+#[doc(hidden)]
+pub fn launch_spawn(ide: Ide, project: &Path, executable: &Path) -> Result<()> {
     match ide {
         Ide::Claude => {
-            Command::new(&launcher.executable)
+            Command::new(executable)
                 .current_dir(project)
                 .spawn()
                 .context("Couldn't start Claude Code")?;
         }
-
         Ide::Terminal => {
-            Command::new(&launcher.executable)
+            Command::new(executable)
                 .arg("-d")
                 .arg(project)
                 .spawn()
                 .context("Couldn't open Windows Terminal")?;
         }
-
         _ => {
-            Command::new(&launcher.executable)
-                .arg(project)
-                .spawn()
-                .with_context(|| format!("Couldn't launch {}", launcher.display_name))?;
+            Command::new(executable).arg(project).spawn().context("Couldn't launch IDE")?;
         }
     }
-
     Ok(())
 }

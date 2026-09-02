@@ -25,6 +25,7 @@
 //! Fresh detection every invocation ensures accuracy.
 
 use directories::BaseDirs;
+use std::path::Path;
 use which::which;
 
 use crate::{ide::registry::InstalledIde, models::ide::Ide};
@@ -94,7 +95,15 @@ fn detect_cli(list: &mut Vec<InstalledIde>, ide: Ide, name: &str, cmd: &str) {
 /// * `list` — List to append to
 fn detect_common_windows_locations(list: &mut Vec<InstalledIde>) {
     let home = BaseDirs::new().unwrap().home_dir().to_path_buf();
+    detect_common_windows_locations_in(list, &home);
+}
 
+/// Check common Windows installation directories under a given home directory.
+///
+/// Extracted from [`detect_common_windows_locations`] so unit tests can
+/// exercise the path checks with a controlled home dir instead of relying
+/// on the real user's installation locations.
+fn detect_common_windows_locations_in(list: &mut Vec<InstalledIde>, home: &Path) {
     // VS Code: Standard Windows installation path
     let vscode = home.join("AppData/Local/Programs/Microsoft VS Code/bin/code.cmd");
     if vscode.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Vscode)) {
@@ -111,5 +120,85 @@ fn detect_common_windows_locations(list: &mut Vec<InstalledIde>) {
     let claude = home.join(".local/bin/claude.exe");
     if claude.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Claude)) {
         list.push(InstalledIde::new(Ide::Claude, "Claude Code", claude));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+
+    /// Create a fake executable at the given Windows-style relative path
+    /// under `home`, then assert it was detected.
+    fn create_windows_exe(home: &Path, rel: &str) {
+        let exe = home.join(rel);
+        fs::create_dir_all(exe.parent().unwrap()).unwrap();
+        fs::write(&exe, "").unwrap();
+    }
+
+    #[test]
+    fn detects_vscode_in_windows_location() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let home = dir.path();
+
+        create_windows_exe(home, "AppData/Local/Programs/Microsoft VS Code/bin/code.cmd");
+
+        let mut list = Vec::new();
+        detect_common_windows_locations_in(&mut list, home);
+
+        assert!(list.iter().any(|i| i.ide == Ide::Vscode));
+    }
+
+    #[test]
+    fn detects_cursor_in_windows_location() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let home = dir.path();
+
+        create_windows_exe(home, "AppData/Local/Programs/Cursor/Cursor.exe");
+
+        let mut list = Vec::new();
+        detect_common_windows_locations_in(&mut list, home);
+
+        assert!(list.iter().any(|i| i.ide == Ide::Cursor));
+    }
+
+    #[test]
+    fn detects_claude_in_local_bin() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let home = dir.path();
+
+        create_windows_exe(home, ".local/bin/claude.exe");
+
+        let mut list = Vec::new();
+        detect_common_windows_locations_in(&mut list, home);
+
+        assert!(list.iter().any(|i| i.ide == Ide::Claude));
+    }
+
+    #[test]
+    fn empty_home_detects_nothing() {
+        let dir = tempfile::TempDir::new().unwrap();
+
+        let mut list = Vec::new();
+        detect_common_windows_locations_in(&mut list, dir.path());
+
+        assert!(list.is_empty());
+    }
+
+    #[test]
+    fn vscode_not_added_twice() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let home = dir.path();
+
+        create_windows_exe(home, "AppData/Local/Programs/Microsoft VS Code/bin/code.cmd");
+
+        let mut list = Vec::new();
+        // Simulate VS Code already found via PATH.
+        list.push(InstalledIde::new(Ide::Vscode, "VS Code", PathBuf::from("code")));
+
+        detect_common_windows_locations_in(&mut list, home);
+
+        assert_eq!(list.iter().filter(|i| i.ide == Ide::Vscode).count(), 1);
     }
 }
