@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 mod common;
 use common::temp_config::test_config;
+use crate::common::temp_project::TempProject;
 
 /// Helper to point the config directory at an isolated temp dir
 fn isolate_config_dir() -> (tempfile::TempDir, std::path::PathBuf) {
@@ -122,4 +123,33 @@ fn save_creates_parent_directory_when_missing() {
     assert!(path.exists(), "save() should create the config file");
 
     reset_config_dir_env();
+}
+
+#[test]
+#[serial]
+fn corrupted_config_is_recreated_with_defaults() {
+    let temp = TempProject::new("corrupt-config");
+
+    unsafe {
+        std::env::set_var("DEVCLI_CONFIG_DIR", temp.root().join("dev-cli"));
+    }
+
+    let config_path = Config::path().unwrap();
+    std::fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+
+    std::fs::write(&config_path, "this isn't valid toml").unwrap();
+
+    let config = Config::load().unwrap();
+
+    assert_eq!(config.default_ide, Ide::Vscode);
+    assert_eq!(config.projects_root.len(), 1);
+
+    // Ensure the file was rewritten with valid TOML.
+    let rewritten = std::fs::read_to_string(config_path).unwrap();
+    assert!(rewritten.contains("projects_root"));
+    assert!(rewritten.contains("default_ide"));
+
+    unsafe {
+        std::env::remove_var("DEVCLI_CONFIG_DIR");
+    }
 }

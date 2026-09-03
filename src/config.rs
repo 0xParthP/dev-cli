@@ -113,6 +113,7 @@ impl Config {
     pub fn load() -> Result<Self> {
         let path = Self::path()?;
 
+        // First run: create default config.
         if !path.exists() {
             let config = Self::default();
             config.save()?;
@@ -122,10 +123,24 @@ impl Config {
         let text = fs::read_to_string(&path)
             .with_context(|| format!("Failed to read config file at {}", path.display()))?;
 
-        let config = toml::from_str(&text)
-            .with_context(|| format!("Invalid config file at {}", path.display()))?;
+        match toml::from_str::<Self>(&text) {
+            Ok(config) => Ok(config),
 
-        Ok(config)
+            Err(error) => {
+                eprintln!(
+                    "Config at {} is invalid ({}). Recreating defaults.",
+                    path.display(),
+                    error
+                );
+
+                let config = Self::default();
+
+                // Explicitly overwrite the corrupted file.
+                fs::write(&path, toml::to_string_pretty(&config)?)?;
+
+                Ok(config)
+            }
+        }
     }
 
     /// Save configuration to file.

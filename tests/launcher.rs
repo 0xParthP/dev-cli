@@ -174,3 +174,54 @@ fn launch_spawn_cursor() {
     let result = launcher::launch_spawn(Ide::Cursor, Path::new("."), Path::new(&executable));
     assert!(result.is_ok());
 }
+
+#[cfg(unix)]
+#[test]
+#[serial]
+fn launch_terminal_uses_true_on_linux() {
+    unsafe {
+        std::env::set_var("DEVCLI_TEST_EXECUTABLE", "true");
+    }
+
+    let result = dev_cli::ide::launcher::launch_terminal(".");
+
+    assert!(result.is_ok());
+
+    unsafe {
+        std::env::remove_var("DEVCLI_TEST_EXECUTABLE");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+#[serial]
+fn launch_cursor_uses_true_on_linux() {
+    unsafe {
+        std::env::set_var("DEVCLI_TEST_EXECUTABLE", "true");
+    }
+
+    let result = dev_cli::ide::launcher::launch_cursor(".");
+
+    assert!(result.is_ok());
+
+    unsafe {
+        std::env::remove_var("DEVCLI_TEST_EXECUTABLE");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+#[serial]
+fn launch_claude_uses_true_on_linux() {
+    unsafe {
+        std::env::set_var("DEVCLI_TEST_EXECUTABLE", "true");
+    }
+
+    let result = dev_cli::ide::launcher::launch_claude(".");
+
+    assert!(result.is_ok());
+
+    unsafe {
+        std::env::remove_var("DEVCLI_TEST_EXECUTABLE");
+    }
+}

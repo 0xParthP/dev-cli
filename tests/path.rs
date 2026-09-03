@@ -10,3 +10,20 @@ fn display_path_returns_string() {
 
     assert!(output.contains("Projects"));
 }
+
+#[test]
+fn display_path_handles_spaces() {
+    let path = PathBuf::from("/tmp/My Projects/demo");
+
+    let formatted = dev_cli::utils::path::display_path(&path);
+
+    assert!(formatted.contains("My Projects"));
+}
+
+#[test]
+fn display_path_handles_empty_path() {
+    let path = std::path::PathBuf::new();
+    let formatted = dev_cli::utils::path::display_path(&path);
+
+    assert_eq!(formatted, "");
+}
