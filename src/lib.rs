@@ -7,7 +7,6 @@ pub mod cli;
 pub mod commands;
 pub mod config;
 pub mod ide;
-pub mod installer;
 pub mod models;
 pub mod scanner;
 pub mod utils;

@@ -86,8 +86,6 @@ impl Config {
     /// - **macOS:** `~/Library/Application Support/dev-cli/config.toml`
     /// - **Linux:** `~/.config/dev-cli/config.toml`
     ///
-    /// # Errors
-    ///
     /// Returns error if platform directories cannot be located.
     pub fn path() -> Result<PathBuf> {
         // Check for test override first.
@@ -108,8 +106,6 @@ impl Config {
     /// If the configuration file doesn't exist, creates it with default values
     /// and returns the defaults.
     ///
-    /// # Errors
-    ///
     /// Returns error if:
     /// - Config directory cannot be located
     /// - File cannot be read (except if missing)
@@ -125,17 +121,11 @@ impl Config {
 
         let text = fs::read_to_string(&path)
             .with_context(|| format!("Failed to read config file at {}", path.display()))?;
-        match toml::from_str(&text) {
-            Ok(cfg) => Ok(cfg),
-            Err(e) => {
-                // Log the error context and recreate a default config
-                eprintln!("Config parse error: {}. Recreating default config.", e);
-                let default_cfg = Self::default();
-                // Overwrite the potentially corrupt config file
-                default_cfg.save()?;
-                Ok(default_cfg)
-            }
-        }
+
+        let config = toml::from_str(&text)
+            .with_context(|| format!("Invalid config file at {}", path.display()))?;
+
+        Ok(config)
     }
 
     /// Save configuration to file.
@@ -158,5 +148,16 @@ impl Config {
         fs::write(path, toml::to_string_pretty(self)?)?;
 
         Ok(())
+    }
+
+    /// Returns `true` if the configuration file already exists.
+    pub fn exists() -> Result<bool> {
+        Ok(Self::path()?.exists())
+    }
+
+    /// Creates and saves a new configuration.
+    pub fn create(config: Self) -> Result<Self> {
+        config.save()?;
+        Ok(config)
     }
 }
