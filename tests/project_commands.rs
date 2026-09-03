@@ -81,10 +81,7 @@ fn run_open_test(ide: &str) {
         .unwrap()
         .env("DEVCLI_CONFIG_DIR", temp.root().join("dev-cli"))
         .env("DEVCLI_SKIP_ONBOARDING", "1")
-        .env(
-            "DEVCLI_TEST_EXECUTABLE",
-            if cfg!(windows) { "cmd" } else { "true" },
-        )
+        .env("DEVCLI_TEST_EXECUTABLE", if cfg!(windows) { "cmd" } else { "true" })
         .args(["project", "open", "demo", "--ide", ide])
         .assert()
         .success();
@@ -115,10 +112,7 @@ fn open_shortcut_command_runs() {
         .unwrap()
         .env("DEVCLI_CONFIG_DIR", temp.root().join("dev-cli"))
         .env("DEVCLI_SKIP_ONBOARDING", "1")
-        .env(
-            "DEVCLI_TEST_EXECUTABLE",
-            if cfg!(windows) { "cmd" } else { "true" },
-        )
+        .env("DEVCLI_TEST_EXECUTABLE", if cfg!(windows) { "cmd" } else { "true" })
         .args(["open", "demo"])
         .assert()
         .success();

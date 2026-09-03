@@ -3,8 +3,8 @@ use serial_test::serial;
 use std::path::PathBuf;
 
 mod common;
-use common::temp_config::test_config;
 use crate::common::temp_project::TempProject;
+use common::temp_config::test_config;
 
 /// Helper to point the config directory at an isolated temp dir
 fn isolate_config_dir() -> (tempfile::TempDir, std::path::PathBuf) {
