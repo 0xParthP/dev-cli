@@ -21,9 +21,9 @@ use dev_cli::{
 fn main() -> Result<()> {
     tracing_subscriber::fmt().with_target(false).without_time().init();
 
-    onboarding::ensure_onboarded()?;
-
     let cli = Cli::parse();
+
+    onboarding::ensure_onboarded()?;
 
     match cli.command {
         Commands::Project(cmd) => commands::project::execute(cmd)?,

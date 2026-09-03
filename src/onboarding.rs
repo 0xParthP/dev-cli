@@ -2,17 +2,17 @@
 //!
 //! Runs automatically the first time any `dev` command is executed.
 
-use std::path::PathBuf;
-
 use anyhow::Result;
 use cliclack::{confirm, input, intro, outro, select};
+use std::io::IsTerminal;
+use std::path::PathBuf;
 
 use dev_cli::{config::Config, models::ide::Ide};
 
 /// Runs onboarding only if config.toml doesn't exist.
 pub fn ensure_onboarded() -> Result<()> {
-    // Skip onboarding during automated tests.
-    if std::env::var("DEVCLI_SKIP_ONBOARDING").is_ok() {
+    // Don't run onboarding unless we're in an interactive terminal.
+    if !std::io::stdin().is_terminal() || !std::io::stdout().is_terminal() {
         return Ok(());
     }
 
