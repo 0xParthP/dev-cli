@@ -177,49 +177,18 @@ fn launch_spawn_cursor() {
 
 #[cfg(unix)]
 #[test]
-#[serial]
-fn launch_terminal_uses_true_on_linux() {
+fn unix_launcher_accepts_all_supported_ides() {
+    use std::path::Path;
+
+    use dev_cli::models::ide::Ide;
+
     unsafe {
         std::env::set_var("DEVCLI_TEST_EXECUTABLE", "true");
     }
 
-    let result = dev_cli::ide::launcher::launch_terminal(".");
-
-    assert!(result.is_ok());
-
-    unsafe {
-        std::env::remove_var("DEVCLI_TEST_EXECUTABLE");
-    }
-}
-
-#[cfg(unix)]
-#[test]
-#[serial]
-fn launch_cursor_uses_true_on_linux() {
-    unsafe {
-        std::env::set_var("DEVCLI_TEST_EXECUTABLE", "true");
-    }
-
-    let result = dev_cli::ide::launcher::launch_cursor(".");
-
-    assert!(result.is_ok());
-
-    unsafe {
-        std::env::remove_var("DEVCLI_TEST_EXECUTABLE");
-    }
-}
-
-#[cfg(unix)]
-#[test]
-#[serial]
-fn launch_claude_uses_true_on_linux() {
-    unsafe {
-        std::env::set_var("DEVCLI_TEST_EXECUTABLE", "true");
-    }
-
-    let result = dev_cli::ide::launcher::launch_claude(".");
-
-    assert!(result.is_ok());
+    assert!(dev_cli::ide::launcher::launch(Path::new("."), Ide::Terminal).is_ok());
+    assert!(dev_cli::ide::launcher::launch(Path::new("."), Ide::Cursor).is_ok());
+    assert!(dev_cli::ide::launcher::launch(Path::new("."), Ide::Claude).is_ok());
 
     unsafe {
         std::env::remove_var("DEVCLI_TEST_EXECUTABLE");
