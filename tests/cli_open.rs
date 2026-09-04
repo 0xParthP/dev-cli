@@ -7,6 +7,40 @@ use tempfile::TempDir;
 
 #[cfg(unix)]
 use common::temp_project::TempProject;
+#[cfg(unix)]
+use std::{fs, io::Write};
+
+#[cfg(unix)]
+fn create_fake_executable() -> std::path::PathBuf {
+    let dir = TempDir::new().unwrap();
+    let dir_path = dir.keep();
+
+    let path = if cfg!(windows) {
+        dir_path.join("fake.cmd")
+    } else {
+        dir_path.join("fake.sh")
+    };
+
+    let mut file = fs::File::create(&path).unwrap();
+
+    if cfg!(windows) {
+        writeln!(file, "@echo off").unwrap();
+        writeln!(file, "exit /b 0").unwrap();
+    } else {
+        writeln!(file, "#!/bin/sh").unwrap();
+        writeln!(file, "exit 0").unwrap();
+
+        use std::os::unix::fs::PermissionsExt;
+
+        let mut perms = file.metadata().unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&path, perms).unwrap();
+    }
+
+    drop(file);
+
+    path
+}
 
 /// Build a `dev` command that points the platform config directory at an
 /// isolated temp dir.
@@ -71,41 +105,32 @@ fn project_list_runs() {
 #[test]
 #[serial]
 fn open_existing_project_with_test_executable() {
-    // Create a fake project at <root>/MyProject/.git
-    let repo = TempProject::new("MyProject");
-    repo.create_git_repo("MyProject");
+    let temp = TempProject::new("cli-open");
+    temp.create_git_repo("MyProject");
 
-    // Point the platform config at a temp dir so the test is hermetic.
-    let tmp = TempDir::new().expect("create temp dir");
-    let dir_str = tmp.path().to_string_lossy().into_owned();
+    // Create a temporary config that points at the temp project root.
+    let config_dir = temp.root().join("dev-cli");
+    std::fs::create_dir_all(&config_dir).unwrap();
 
-    // Point the config at the temp project root.
-    let config_path = tmp.path().join("dev-cli").join("config.toml");
-    std::fs::create_dir_all(config_path.parent().unwrap()).unwrap();
-    let projects_root_str = repo.root().to_string_lossy().into_owned();
-    let config_toml =
-        format!("projects_root = [\"{projects_root_str}\"]\ndefault_ide = \"Vscode\"\n");
-    std::fs::write(&config_path, config_toml).unwrap();
+    let config = format!(
+        r#"
+default_ide = "Cursor"
 
-    // Create a fake executable for the test.
-    let n = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-    let fake_exe = std::env::temp_dir().join(format!("devcli_open_test.{n}.sh"));
-    std::fs::write(&fake_exe, "#!/bin/sh\nexit 0\n").expect("write fake exe");
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = std::fs::metadata(&fake_exe).unwrap().permissions();
-        perms.set_mode(0o755);
-        std::fs::set_permissions(&fake_exe, perms).unwrap();
-    }
+projects_root = ["{}"]
+"#,
+        temp.root().display().to_string().replace('\\', "\\\\")
+    );
 
-    let mut cmd = Command::cargo_bin("dev").unwrap();
-    cmd.env("XDG_CONFIG_HOME", &dir_str);
-    cmd.env("HOME", &dir_str);
-    cmd.env("DEVCLI_TEST_EXECUTABLE", fake_exe.to_string_lossy().to_string());
-    cmd.arg("open").arg("MyProject").assert().success();
+    std::fs::write(config_dir.join("config.toml"), config).unwrap();
 
-    let _ = std::fs::remove_file(&fake_exe);
+    let fake = create_fake_executable();
+
+    Command::cargo_bin("dev")
+        .unwrap()
+        .env("DEVCLI_SKIP_ONBOARDING", "1")
+        .env("DEVCLI_TEST_EXECUTABLE", &fake)
+        .env("DEVCLI_CONFIG_DIR", &config_dir)
+        .args(["open", "MyProject"])
+        .assert()
+        .success();
 }
