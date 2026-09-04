@@ -33,7 +33,6 @@ echo "✅ Branch name OK: $BRANCH_NAME"
 echo "🦀 Running rustfmt..."
 cargo fmt
 
-# Re-stage any files modified by rustfmt
 git add -A
 
 echo "🔍 Running clippy..."
