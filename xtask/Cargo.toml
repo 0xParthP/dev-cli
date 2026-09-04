@@ -8,3 +8,4 @@ publish = false
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 owo-colors = "4"
+directories = "6"

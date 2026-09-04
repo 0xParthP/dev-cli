@@ -1,7 +1,10 @@
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand};
+use directories::BaseDirs;
 use owo_colors::OwoColorize;
 use std::{
+    fs,
+    path::PathBuf,
     process::{Command, Stdio},
     time::Instant,
 };
@@ -24,6 +27,13 @@ enum Commands {
 
     /// Print terminal coverage summary.
     CoverageSummary,
+
+    /// Install the current binary into ~/.local/bin (developer only).
+    Install {
+        /// Install the release build instead of debug.
+        #[arg(long)]
+        release: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -32,8 +42,8 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Ci => ci(),
         Commands::Coverage => run("cargo", &["coverage"]),
-
         Commands::CoverageSummary => run("cargo", &["coverage-summary"]),
+        Commands::Install { release } => install(release),
     }
 }
 
@@ -54,6 +64,66 @@ fn ci() -> Result<()> {
     println!("{}", "────────────────────────────────────────────".cyan());
 
     println!("{} {} ({:.2?})", "PASS".green().bold(), "All checks passed".green(), start.elapsed());
+
+    Ok(())
+}
+
+fn install(release: bool) -> Result<()> {
+    let profile = if release { "release" } else { "debug" };
+
+    println!();
+    println!("{}", "Installing dev-cli (developer mode)".bold().cyan());
+
+    // Build latest binary first.
+    let mut build = Command::new("cargo");
+    build.arg("build");
+
+    if release {
+        build.arg("--release");
+    }
+
+    let status = build.status().context("Failed to invoke cargo build")?;
+
+    if !status.success() {
+        bail!("Build failed.");
+    }
+
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .context("Couldn't determine workspace root")?
+        .to_path_buf();
+
+    let binary = if cfg!(windows) {
+        workspace_root.join(format!("target/{profile}/dev.exe"))
+    } else {
+        workspace_root.join(format!("target/{profile}/dev"))
+    };
+
+    let home = BaseDirs::new().context("Couldn't locate home directory")?.home_dir().to_path_buf();
+
+    let install_dir = home.join(".local/bin");
+    fs::create_dir_all(&install_dir)?;
+
+    let destination =
+        if cfg!(windows) { install_dir.join("dev.exe") } else { install_dir.join("dev") };
+
+    fs::copy(&binary, &destination)
+        .with_context(|| format!("Couldn't copy {}", binary.display()))?;
+
+    println!();
+    println!("{} Installed successfully", "PASS".green().bold());
+    println!("Source      {}", binary.display());
+    println!("Destination {}", destination.display());
+
+    if std::env::var_os("PATH")
+        .map(|path| !std::env::split_paths(&path).any(|p| p == install_dir))
+        .unwrap_or(true)
+    {
+        println!();
+        println!("{}", "PATH reminder".yellow().bold());
+        println!("Add this directory to your PATH:");
+        println!("{}", install_dir.display());
+    }
 
     Ok(())
 }
@@ -103,10 +173,6 @@ fn coverage_step(minimum: f64) -> Result<()> {
     for line in stdout.lines() {
         if line.starts_with("TOTAL") {
             let columns: Vec<_> = line.split_whitespace().collect();
-
-            // cargo llvm-cov summary format:
-            // TOTAL regions missed_regions region% functions missed_functions function%
-            //       lines missed_lines line%
 
             let region_coverage = columns[3].trim_end_matches('%').parse::<f64>().unwrap_or(0.0);
 
