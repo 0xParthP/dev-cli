@@ -8,5 +8,6 @@ pub mod commands;
 pub mod config;
 pub mod ide;
 pub mod models;
+pub mod onboarding;
 pub mod scanner;
 pub mod utils;

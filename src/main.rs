@@ -9,13 +9,12 @@
 //! - Parse CLI arguments using `clap`.
 //! - Dispatch commands to the library crate.
 //!
-mod onboarding;
 use anyhow::Result;
 use clap::Parser;
 
 use dev_cli::{
     cli::{Cli, Commands},
-    commands,
+    commands, onboarding,
 };
 
 fn main() -> Result<()> {
