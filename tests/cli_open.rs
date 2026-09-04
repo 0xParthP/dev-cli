@@ -15,11 +15,7 @@ fn create_fake_executable() -> std::path::PathBuf {
     let dir = TempDir::new().unwrap();
     let dir_path = dir.keep();
 
-    let path = if cfg!(windows) {
-        dir_path.join("fake.cmd")
-    } else {
-        dir_path.join("fake.sh")
-    };
+    let path = if cfg!(windows) { dir_path.join("fake.cmd") } else { dir_path.join("fake.sh") };
 
     let mut file = fs::File::create(&path).unwrap();
 
