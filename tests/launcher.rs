@@ -177,6 +177,7 @@ fn launch_spawn_cursor() {
 
 #[cfg(unix)]
 #[test]
+#[serial]
 fn unix_launcher_accepts_all_supported_ides() {
     use std::path::Path;
 
@@ -186,9 +187,11 @@ fn unix_launcher_accepts_all_supported_ides() {
         std::env::set_var("DEVCLI_TEST_EXECUTABLE", "true");
     }
 
-    assert!(dev_cli::ide::launcher::launch(Path::new("."), Ide::Terminal).is_ok());
-    assert!(dev_cli::ide::launcher::launch(Path::new("."), Ide::Cursor).is_ok());
-    assert!(dev_cli::ide::launcher::launch(Path::new("."), Ide::Claude).is_ok());
+    let project = Path::new(".");
+
+    assert!(dev_cli::ide::launcher::launch(Ide::Terminal, project).is_ok());
+    assert!(dev_cli::ide::launcher::launch(Ide::Cursor, project).is_ok());
+    assert!(dev_cli::ide::launcher::launch(Ide::Claude, project).is_ok());
 
     unsafe {
         std::env::remove_var("DEVCLI_TEST_EXECUTABLE");

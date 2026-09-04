@@ -16,24 +16,6 @@
 //! projects_root = ["C:\\Users\\user\\Projects", "C:\\Users\\user\\Work"]
 //! default_ide = "cursor"
 //! ```
-//!
-//! # Usage
-//!
-//! ```no_run
-//! # use anyhow::Result;
-//! # fn example() -> Result<()> {
-//! use dev_cli::config::Config;
-//!
-//! // Load configuration (creates with defaults if missing)
-//! let config = Config::load()?;
-//!
-//! // Modify and save
-//! let mut config = config;
-//! config.default_ide = dev_cli::models::ide::Ide::Cursor;
-//! config.save()?;
-//! # Ok(())
-//! # }
-//! ```
 
 use std::{fs, path::PathBuf};
 
@@ -50,9 +32,6 @@ use crate::models::ide::Ide;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     /// Directories to search for Git repositories.
-    ///
-    /// Projects are discovered by searching for `.git` directories
-    /// within these root paths.
     pub projects_root: Vec<PathBuf>,
 
     /// Default IDE to use when opening projects.
@@ -67,10 +46,6 @@ impl Default for Config {
     /// Defaults:
     /// - `projects_root` — `~/Projects` directory
     /// - `default_ide` — VS Code
-    ///
-    /// # Panics
-    ///
-    /// Panics if home directory cannot be determined.
     fn default() -> Self {
         let home = BaseDirs::new().expect("Couldn't find home directory").home_dir().to_path_buf();
 

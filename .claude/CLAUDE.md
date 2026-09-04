@@ -249,6 +249,7 @@ fn config_show_works() {
 
 ### Test Requirements
 
+- ✅ All tests must be contained within the tests/ directory. No tests should be written under src/
 - ✅ New functions must have unit tests
 - ✅ New commands must have integration tests
 - ✅ Error cases must be tested
