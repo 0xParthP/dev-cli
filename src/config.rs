@@ -16,24 +16,6 @@
 //! projects_root = ["C:\\Users\\user\\Projects", "C:\\Users\\user\\Work"]
 //! default_ide = "cursor"
 //! ```
-//!
-//! # Usage
-//!
-//! ```no_run
-//! # use anyhow::Result;
-//! # fn example() -> Result<()> {
-//! use dev_cli::config::Config;
-//!
-//! // Load configuration (creates with defaults if missing)
-//! let config = Config::load()?;
-//!
-//! // Modify and save
-//! let mut config = config;
-//! config.default_ide = dev_cli::models::ide::Ide::Cursor;
-//! config.save()?;
-//! # Ok(())
-//! # }
-//! ```
 
 use std::{fs, path::PathBuf};
 
@@ -50,9 +32,6 @@ use crate::models::ide::Ide;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     /// Directories to search for Git repositories.
-    ///
-    /// Projects are discovered by searching for `.git` directories
-    /// within these root paths.
     pub projects_root: Vec<PathBuf>,
 
     /// Default IDE to use when opening projects.
@@ -67,10 +46,6 @@ impl Default for Config {
     /// Defaults:
     /// - `projects_root` — `~/Projects` directory
     /// - `default_ide` — VS Code
-    ///
-    /// # Panics
-    ///
-    /// Panics if home directory cannot be determined.
     fn default() -> Self {
         let home = BaseDirs::new().expect("Couldn't find home directory").home_dir().to_path_buf();
 
@@ -85,8 +60,6 @@ impl Config {
     /// - **Windows:** `C:\Users\{user}\AppData\Roaming\dev-cli\config\config.toml`
     /// - **macOS:** `~/Library/Application Support/dev-cli/config.toml`
     /// - **Linux:** `~/.config/dev-cli/config.toml`
-    ///
-    /// # Errors
     ///
     /// Returns error if platform directories cannot be located.
     pub fn path() -> Result<PathBuf> {
@@ -108,8 +81,6 @@ impl Config {
     /// If the configuration file doesn't exist, creates it with default values
     /// and returns the defaults.
     ///
-    /// # Errors
-    ///
     /// Returns error if:
     /// - Config directory cannot be located
     /// - File cannot be read (except if missing)
@@ -117,6 +88,7 @@ impl Config {
     pub fn load() -> Result<Self> {
         let path = Self::path()?;
 
+        // First run: create default config.
         if !path.exists() {
             let config = Self::default();
             config.save()?;
@@ -125,15 +97,23 @@ impl Config {
 
         let text = fs::read_to_string(&path)
             .with_context(|| format!("Failed to read config file at {}", path.display()))?;
-        match toml::from_str(&text) {
-            Ok(cfg) => Ok(cfg),
-            Err(e) => {
-                // Log the error context and recreate a default config
-                eprintln!("Config parse error: {}. Recreating default config.", e);
-                let default_cfg = Self::default();
-                // Overwrite the potentially corrupt config file
-                default_cfg.save()?;
-                Ok(default_cfg)
+
+        match toml::from_str::<Self>(&text) {
+            Ok(config) => Ok(config),
+
+            Err(error) => {
+                eprintln!(
+                    "Config at {} is invalid ({}). Recreating defaults.",
+                    path.display(),
+                    error
+                );
+
+                let config = Self::default();
+
+                // Explicitly overwrite the corrupted file.
+                fs::write(&path, toml::to_string_pretty(&config)?)?;
+
+                Ok(config)
             }
         }
     }
@@ -158,5 +138,16 @@ impl Config {
         fs::write(path, toml::to_string_pretty(self)?)?;
 
         Ok(())
+    }
+
+    /// Returns `true` if the configuration file already exists.
+    pub fn exists() -> Result<bool> {
+        Ok(Self::path()?.exists())
+    }
+
+    /// Creates and saves a new configuration.
+    pub fn create(config: Self) -> Result<Self> {
+        config.save()?;
+        Ok(config)
     }
 }

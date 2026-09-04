@@ -39,19 +39,16 @@ pub struct Cli {
 /// - `Open` — Shorthand for opening projects
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Project management (list, open).
+    /// Project Management
     Project(ProjectCommand),
 
-    /// Configuration management (show, init, set default IDE).
+    /// Configuration Management.
     Config(ConfigCommand),
 
-    /// IDE management (list detected IDEs).
+    /// IDE Management
     Ide(IdeCommand),
 
-    /// Install dev-cli globally in ~/.local/bin.
-    Install(InstallCommand),
-
-    /// Open a project (shorthand for `project open`).
+    /// Open a project (equivalent to `project open`).
     Open(OpenArgs),
 }
 
@@ -133,6 +130,3 @@ pub enum IdeSubcommand {
     /// List all detected IDEs on the system.
     List,
 }
-
-#[derive(clap::Args, Debug)]
-pub struct InstallCommand {}

@@ -174,3 +174,26 @@ fn launch_spawn_cursor() {
     let result = launcher::launch_spawn(Ide::Cursor, Path::new("."), Path::new(&executable));
     assert!(result.is_ok());
 }
+
+#[cfg(unix)]
+#[test]
+#[serial]
+fn unix_launcher_accepts_all_supported_ides() {
+    use std::path::Path;
+
+    use dev_cli::models::ide::Ide;
+
+    unsafe {
+        std::env::set_var("DEVCLI_TEST_EXECUTABLE", "true");
+    }
+
+    let project = Path::new(".");
+
+    assert!(dev_cli::ide::launcher::launch(Ide::Terminal, project).is_ok());
+    assert!(dev_cli::ide::launcher::launch(Ide::Cursor, project).is_ok());
+    assert!(dev_cli::ide::launcher::launch(Ide::Claude, project).is_ok());
+
+    unsafe {
+        std::env::remove_var("DEVCLI_TEST_EXECUTABLE");
+    }
+}

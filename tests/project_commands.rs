@@ -23,27 +23,15 @@ projects_root = ["{}"]
     fs::write(config_dir.join("config.toml"), config).unwrap();
 }
 
-/// Create a CLI command configured for this temporary project.
-fn dev_cmd(temp: &TempProject) -> Command {
-    let mut cmd = Command::cargo_bin("dev").unwrap();
-
-    cmd.env("DEVCLI_CONFIG_DIR", temp.root().join("dev-cli"));
-
-    #[cfg(windows)]
-    cmd.env("DEVCLI_TEST_EXECUTABLE", "cmd");
-
-    #[cfg(unix)]
-    cmd.env("DEVCLI_TEST_EXECUTABLE", "true");
-
-    cmd
-}
-
 #[test]
 fn project_list_runs_with_empty_root() {
     let temp = TempProject::new("empty-root");
     write_temp_config(&temp);
 
-    dev_cmd(&temp)
+    Command::cargo_bin("dev")
+        .unwrap()
+        .env("DEVCLI_CONFIG_DIR", temp.root().join("dev-cli"))
+        .env("DEVCLI_SKIP_ONBOARDING", "1")
         .args(["project", "list"])
         .assert()
         .success()
@@ -57,7 +45,10 @@ fn project_list_discovers_repository() {
     temp.create_git_repo("demo");
     write_temp_config(&temp);
 
-    dev_cmd(&temp)
+    Command::cargo_bin("dev")
+        .unwrap()
+        .env("DEVCLI_CONFIG_DIR", temp.root().join("dev-cli"))
+        .env("DEVCLI_SKIP_ONBOARDING", "1")
         .args(["project", "list"])
         .assert()
         .success()
@@ -69,7 +60,10 @@ fn project_open_missing_project_returns_error() {
     let temp = TempProject::new("missing-project");
     write_temp_config(&temp);
 
-    dev_cmd(&temp)
+    Command::cargo_bin("dev")
+        .unwrap()
+        .env("DEVCLI_CONFIG_DIR", temp.root().join("dev-cli"))
+        .env("DEVCLI_SKIP_ONBOARDING", "1")
         .args(["project", "open", "does-not-exist"])
         .assert()
         .failure()
@@ -77,11 +71,20 @@ fn project_open_missing_project_returns_error() {
 }
 
 fn run_open_test(ide: &str) {
-    let temp = TempProject::new(&format!("open-{ide}"));
+    let name = format!("open-{ide}");
+    let temp = TempProject::new(&name);
+
     temp.create_git_repo("demo");
     write_temp_config(&temp);
 
-    dev_cmd(&temp).args(["project", "open", "demo", "--ide", ide]).assert().success();
+    Command::cargo_bin("dev")
+        .unwrap()
+        .env("DEVCLI_CONFIG_DIR", temp.root().join("dev-cli"))
+        .env("DEVCLI_SKIP_ONBOARDING", "1")
+        .env("DEVCLI_TEST_EXECUTABLE", if cfg!(windows) { "cmd" } else { "true" })
+        .args(["project", "open", "demo", "--ide", ide])
+        .assert()
+        .success();
 }
 
 #[test]
@@ -105,5 +108,56 @@ fn open_shortcut_command_runs() {
     temp.create_git_repo("demo");
     write_temp_config(&temp);
 
-    dev_cmd(&temp).args(["open", "demo"]).assert().success();
+    Command::cargo_bin("dev")
+        .unwrap()
+        .env("DEVCLI_CONFIG_DIR", temp.root().join("dev-cli"))
+        .env("DEVCLI_SKIP_ONBOARDING", "1")
+        .env("DEVCLI_TEST_EXECUTABLE", if cfg!(windows) { "cmd" } else { "true" })
+        .args(["open", "demo"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn project_list_with_no_git_repositories_prints_header_only() {
+    let temp = TempProject::new("no-repositories");
+    write_temp_config(&temp);
+
+    unsafe {
+        std::env::set_var("DEVCLI_CONFIG_DIR", temp.root().join("dev-cli"));
+        std::env::set_var("DEVCLI_SKIP_ONBOARDING", "1");
+    }
+
+    Command::cargo_bin("dev")
+        .unwrap()
+        .args(["project", "list"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Configured Project Roots"))
+        .stdout(predicate::str::contains("Discovered Git Repositories"));
+
+    unsafe {
+        std::env::remove_var("DEVCLI_SKIP_ONBOARDING");
+        std::env::remove_var("DEVCLI_CONFIG_DIR");
+    }
+}
+
+#[test]
+fn project_list_shows_multiple_git_repositories() {
+    let temp = TempProject::new("multiple-projects");
+
+    temp.create_git_repo("alpha");
+    temp.create_git_repo("beta");
+
+    write_temp_config(&temp);
+
+    Command::cargo_bin("dev")
+        .unwrap()
+        .env("DEVCLI_CONFIG_DIR", temp.root().join("dev-cli"))
+        .env("DEVCLI_SKIP_ONBOARDING", "1")
+        .args(["project", "list"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("alpha"))
+        .stdout(predicate::str::contains("beta"));
 }

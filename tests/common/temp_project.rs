@@ -14,6 +14,9 @@ pub struct TempProject {
 impl TempProject {
     /// Creates a temporary workspace.
     pub fn new(_name: &str) -> Self {
+        unsafe {
+            std::env::set_var("DEVCLI_SKIP_ONBOARDING", "1");
+        }
         Self { root: tempfile::tempdir().unwrap() }
     }
 
