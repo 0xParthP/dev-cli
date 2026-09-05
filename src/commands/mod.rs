@@ -7,7 +7,6 @@
 //!
 //! - [`config`] — Configuration management (`dev config`)
 //! - [`ide`] — IDE management (`dev ide`)
-//! - [`install`] — Global installation (`dev install`)
 //! - [`project`] — Project management (`dev project`)
 
 pub mod config;

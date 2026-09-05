@@ -39,40 +39,44 @@ pub fn my_function() { }
 
 ### Example: dev-cli
 
-In `src/main.rs`, we declare our modules:
+`dev-cli` is a Cargo workspace with two members: the binary and the `xtask` helper crate. Inside `src/`, `lib.rs` declares the modules so the binary and the integration tests can both use them:
 
 ```rust
-mod cli;           // Reads cli.rs
-mod commands;      // Reads commands/mod.rs
-mod config;        // Reads config.rs
-mod ide;           // Reads ide/mod.rs
-mod installer;     // Reads installer.rs
-mod models;        // Reads models/mod.rs
-mod scanner;       // Reads scanner.rs
+// src/lib.rs
+pub mod cli;
+pub mod commands;
+pub mod config;
+pub mod ide;
+pub mod models;
+pub mod onboarding;
+pub mod scanner;
+pub mod startup;
+pub mod utils;
 ```
 
-Then we use them:
+`src/main.rs` then `use`s the re-exports and dispatches:
 
 ```rust
-use cli::{Cli, Commands};
-use clap::Parser;
+use dev_cli::{
+    cli::{Cli, Commands},
+    commands, onboarding,
+};
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    
+    onboarding::ensure_onboarded()?;
     match cli.command {
         Commands::Project(cmd) => commands::project::execute(cmd)?,
-        Commands::Config(cmd) => commands::config::execute(cmd)?,
+        Commands::Config(cmd)  => commands::config::execute(cmd)?,
         // ...
     }
-    
     Ok(())
 }
 ```
 
 ### Key Takeaway
 
-Modules provide **namespacing** and **organization**. They don't affect performance.
+Modules provide **namespacing** and **organization**. They don't affect performance. Splitting into a library crate (`lib.rs`) lets integration tests `use dev_cli::…` directly without going through the binary.
 
 ---
 
@@ -109,7 +113,7 @@ This struct:
 - Uses `#[derive(...)]` to automatically implement traits
 - Has `pub` fields so other modules can read them
 
-Creating a Config:
+Creating a `Config`:
 
 ```rust
 let config = Config {
@@ -149,7 +153,7 @@ match color {
 In `src/models/ide.rs`:
 
 ```rust
-#[derive(Debug, Clone, Copy, ValueEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ValueEnum)]
 pub enum Ide {
     Cursor,
     Vscode,
@@ -161,15 +165,14 @@ pub enum Ide {
 }
 ```
 
-This enum represents different IDEs. In `src/main.rs`, we dispatch commands with pattern matching:
+In `src/main.rs`, we dispatch commands with pattern matching:
 
 ```rust
 match cli.command {
     Commands::Project(cmd) => commands::project::execute(cmd)?,
-    Commands::Config(cmd) => commands::config::execute(cmd)?,
-    Commands::Ide(cmd) => commands::ide::execute(cmd)?,
-    Commands::Install => commands::install::execute()?,
-    Commands::Open(args) => commands::project::open_shortcut(args)?,
+    Commands::Config(cmd)  => commands::config::execute(cmd)?,
+    Commands::Ide(cmd)     => commands::ide::execute(cmd)?,
+    Commands::Open(args)   => commands::project::open_shortcut(args)?,
 }
 ```
 
@@ -181,7 +184,6 @@ pub enum Commands {
     Project(ProjectCommand),
     Config(ConfigCommand),
     Ide(IdeCommand),
-    Install,
     Open(OpenArgs),
 }
 ```
@@ -233,16 +235,15 @@ What each derive does:
 
 ### Custom Trait Implementation
 
-In `src/config.rs`, we manually implement `Default`:
+In `src/config.rs`, `Default` is implemented manually so the `projects_root` can default to `~/Projects` on the current platform:
 
 ```rust
 impl Default for Config {
     fn default() -> Self {
-        let home = BaseDirs::new()
-            .expect("Couldn't find home directory")
+        let home = directories::ProjectDirs::from("dev", "0xParthP", "dev-cli")
+            .expect("a home directory must exist")
             .home_dir()
             .to_path_buf();
-
         Self {
             projects_root: vec![home.join("Projects")],
             default_ide: Ide::Vscode,
@@ -251,7 +252,7 @@ impl Default for Config {
 }
 ```
 
-Then we can create a default Config:
+Then we can create a default `Config`:
 
 ```rust
 let config = Config::default();
@@ -285,57 +286,64 @@ The `?` operator unwraps `Ok` or returns early with `Err`.
 
 ### Example: dev-cli
 
-In `src/config.rs`:
+`Config::load` is the canonical error-handling example. The current version is forgiving on purpose: a parse error logs a message on stderr and writes a fresh default config so the user is never stuck:
 
 ```rust
 impl Config {
     pub fn load() -> Result<Self> {
-        let path = Self::path()?;  // ← Returns early if path() fails
+        let path = Self::path()?;
 
         if !path.exists() {
             let config = Self::default();
-            config.save()?;  // ← Returns early if save() fails
+            config.save()?;
             return Ok(config);
         }
 
-        let text = fs::read_to_string(path)?;  // ← Returns early if read fails
-        Ok(toml::from_str(&text)?)  // ← Returns early if parsing fails
+        let text = fs::read_to_string(&path)?;
+        match toml::from_str(&text) {
+            Ok(cfg) => Ok(cfg),
+            Err(err) => {
+                eprintln!("config parse error: {err}; rewriting with defaults");
+                let cfg = Self::default();
+                cfg.save()?;
+                Ok(cfg)
+            }
+        }
     }
 
     pub fn save(&self) -> Result<()> {
         let path = Self::path()?;
-
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
-
         fs::write(path, toml::to_string_pretty(self)?)?;
-
         Ok(())
     }
 }
 ```
 
-The `anyhow` crate makes errors even nicer:
+The `anyhow` crate makes errors even nicer — `.context(...)` adds a layer of meaning as the error propagates:
 
 ```rust
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 
 pub fn load() -> Result<Config> {
     let path = Self::path()
         .context("Could not determine config directory")?;
-    
+
     let text = fs::read_to_string(&path)
         .context("Failed to read config file")?;
-    
+
     toml::from_str(&text)
         .context("Config file is not valid TOML")
 }
 ```
 
+`main` returns `Result<()>` and lets `anyhow`'s default formatting render the full error chain.
+
 ### Key Takeaway
 
-`Result` forces you to handle errors explicitly. `?` and `.context()` make error handling clean and ergonomic.
+`Result` forces you to handle errors explicitly. `?` and `.context()` make error handling clean and ergonomic, and `anyhow::Result` is the project's return-type convention for fallible functions.
 
 ---
 
@@ -368,35 +376,22 @@ fn calculate_length(s: &String) -> usize {
 
 ### Example: dev-cli
 
-In `src/commands/project.rs`:
+The project-open flow passes borrowed `&Path` references through every layer:
 
 ```rust
-fn open(args: OpenArgs) -> Result<()> {
-    let config = Config::load()?;  // config is owned here
-
-    for root in config.projects_root {  // Borrowed reference to projects_root
-        let candidate = root.join(&args.project);  // Borrow args.project
-
-        if candidate.exists() {
-            let ide = args.ide.unwrap_or(config.default_ide);
-
-            launcher::launch(ide, &candidate)?;  // Borrow candidate
-
-            println!("{} {}", "Opened".green(), candidate.display());
-
-            return Ok(());
-        }
-    }
-    
-    bail!("Project '{}' not found.", args.project)
+pub fn launch(ide: Ide, path: &Path) -> Result<()> {
+    let installed = detect_ides()
+        .into_iter()
+        .find(|i| i.ide == ide)
+        .ok_or_else(|| anyhow!("{:?} is not installed", ide))?;
+    launch_spawn(ide, path, &installed.path)
 }
 ```
 
 Key points:
-- `config` is owned by the function
-- `config.projects_root` is borrowed with `for root in`
-- `&args.project` and `&candidate` are borrowed references
-- Everything is automatically freed at function end
+- `path` is borrowed; we don't own it.
+- `&installed.path` borrows the field of the `InstalledIde`.
+- Everything is automatically freed at function end.
 
 ### Key Takeaway
 
@@ -432,21 +427,22 @@ fn main() -> Result<()> {
         .without_time()
         .init();
 
-    let cli = Cli::parse();  // If this fails, return Err
+    let cli = Cli::parse()?; // (Cli::parse() actually panics, not Result — but every other fallible step uses ?)
+
+    onboarding::ensure_onboarded()?;
 
     match cli.command {
-        Commands::Project(cmd) => commands::project::execute(cmd)?,  // ← ?
-        Commands::Config(cmd) => commands::config::execute(cmd)?,    // ← ?
-        Commands::Ide(cmd) => commands::ide::execute(cmd)?,          // ← ?
-        Commands::Install => commands::install::execute()?,          // ← ?
-        Commands::Open(args) => commands::project::open_shortcut(args)?,  // ← ?
+        Commands::Project(cmd) => commands::project::execute(cmd)?,        // ← ?
+        Commands::Config(cmd)  => commands::config::execute(cmd)?,         // ← ?
+        Commands::Ide(cmd)     => commands::ide::execute(cmd)?,            // ← ?
+        Commands::Open(args)   => commands::project::open_shortcut(args)?, // ← ?
     }
 
     Ok(())
 }
 ```
 
-Each `?` means "if this is an Err, return it immediately".
+Each `?` means "if this is an `Err`, return it immediately".
 
 ### Key Takeaway
 
@@ -482,12 +478,6 @@ fn takes_and_returns(s: &String) -> &String {
 Sometimes you need to be explicit:
 
 ```rust
-fn takes_two(s1: &String, s2: &String) -> &String {
-    // Which string does the result borrow from?
-    // Rust makes you specify!
-    // (This function doesn't work without lifetimes)
-}
-
 fn takes_two<'a>(s1: &'a String, s2: &'a String) -> &'a String {
     // Now Rust knows: result borrows from either s1 or s2
 }
@@ -502,26 +492,19 @@ pub fn launch(ide: Ide, path: &Path) -> Result<()> {
     // `path` is borrowed; we don't own it
     // The function can't use `path` after it returns
     // Lifetime is implicit: `&'_ Path`
-    
-    let cmd = match ide {
-        Ide::Vscode => "code",
-        Ide::Cursor => "cursor",
-        // ...
-    };
 
-    Command::new(cmd)
-        .arg(path)  // Pass borrowed path to spawned process
-        .spawn()?
-        .wait()?;
-
-    Ok(())
+    let installed = detect_ides()
+        .into_iter()
+        .find(|i| i.ide == ide)
+        .ok_or_else(|| anyhow!("{:?} is not installed", ide))?;
+    launch_spawn(ide, path, &installed.path)
 }
 ```
 
 Lifetimes are inferred here because:
-- We take a borrowed reference `&Path`
-- We use it once and don't return it
-- Rust knows it lives long enough
+- We take a borrowed reference `&Path`.
+- We use it once and don't return it.
+- Rust knows it lives long enough.
 
 ### Key Takeaway
 
@@ -536,9 +519,7 @@ Lifetimes can seem complex, but Rust infers them in most cases. When you need th
 ```rust
 pub fn do_something() -> Result<()> {
     let config = Config::load()?;
-    
     println!("{:?}", config);
-    
     Ok(())
 }
 ```
@@ -546,14 +527,14 @@ pub fn do_something() -> Result<()> {
 **Rust Concepts:**
 - `Result<()>` for errors
 - `?` for error propagation
-- Ownership (config is dropped at function end)
+- Ownership (`config` is dropped at function end)
 
 ### Pattern 2: Pattern Matching on Enums
 
 ```rust
 match cli.command {
     Commands::Project(cmd) => commands::project::execute(cmd)?,
-    Commands::Config(cmd) => commands::config::execute(cmd)?,
+    Commands::Config(cmd)  => commands::config::execute(cmd)?,
     // ...
 }
 ```
@@ -566,7 +547,7 @@ match cli.command {
 ### Pattern 3: Iterating and Borrowing
 
 ```rust
-for root in config.projects_root {
+for root in &config.projects_root {
     let candidate = root.join(&args.project);
     if candidate.exists() {
         // Do something
@@ -579,7 +560,7 @@ for root in config.projects_root {
 - Automatic borrowing (`for root in` borrows)
 - Method calls on borrowed values
 
-### Pattern 4: Derive-Based Deserialization
+### Pattern 4: Derive-Based Deserialisation
 
 ```rust
 #[derive(Serialize, Deserialize)]
@@ -611,10 +592,10 @@ let config: Config = toml::from_str(&text)?;
 
 Try these challenges:
 
-1. **Add a new command:** Follow [CONTRIBUTING.md](../CONTRIBUTING.md#adding-a-new-command)
-2. **Add IDE detection:** Extend `src/ide/detect.rs` with Windows Registry support
-3. **Write a test:** Add a test case to one of the integration test files in `tests/` (see [testing.md](testing.md))
-4. **Refactor:** Split `src/commands/project.rs` into smaller functions
+1. **Add a new command:** Follow [CONTRIBUTING.md](../CONTRIBUTING.md#adding-a-new-command).
+2. **Add IDE detection:** Extend `src/ide/detect.rs` with Windows Registry support.
+3. **Write a test:** Add a test case to one of the integration test files in `tests/` (see [testing.md](testing.md)). Remember: no tests under `src/`.
+4. **Refactor:** Split `src/commands/project.rs` into smaller functions.
 
 ---
 

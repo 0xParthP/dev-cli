@@ -88,23 +88,13 @@ cargo tree
 
 The project ships a `deny.toml`; treat its output as a gate. If a CVE is reported in a direct dep, update within 7 days or document an exception in `SECURITY.md`.
 
-### 6. Installer — `BLOCKER` if violated
-
-`dev install` writes to `~/.local/bin` and may touch PATH:
-
-- [ ] The install target must be a real directory owned by the current user.
-- [ ] Never overwrite a file without checking it is or isn't a symlink to something else.
-- [ ] Never `chmod 777` or set world-writable permissions on the installed binary.
-- [ ] Surface a clear confirmation before any system-level change.
-- [ ] On Windows, do not write to `Program Files` or other system directories without elevation.
-
-### 7. Error Output & Logging — `WARNING` if violated
+### 6. Error Output & Logging — `WARNING` if violated
 
 - [ ] Error chains must not include secrets (none expected here, but watch for paths with embedded credentials).
 - [ ] Long path output is fine; do not log the *contents* of user files even on error.
 - [ ] `tracing` events with user paths should use `display()` not `debug()` to avoid log injection.
 
-### 8. Unsafe Code — `BLOCKER` if unjustified
+### 7. Unsafe Code — `BLOCKER` if unjustified
 
 - [ ] `unsafe` blocks are forbidden unless reviewed and annotated with `// SAFETY:` comments.
 - [ ] No raw pointer arithmetic in a CLI of this size.
