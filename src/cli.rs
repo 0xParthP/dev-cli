@@ -26,7 +26,7 @@ use crate::models::ide::Ide;
 pub struct Cli {
     /// The subcommand to execute.
     #[command(subcommand)]
-    pub command: Commands,
+    pub command: Option<Commands>,
 }
 
 /// Available subcommands for dev-cli.

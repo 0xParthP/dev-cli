@@ -4,6 +4,7 @@ use dev_cli::onboarding::{default_projects_dir, ensure_onboarded};
 use serial_test::serial;
 use std::io::IsTerminal;
 use std::path::PathBuf;
+use tempfile::TempDir;
 
 mod common;
 use crate::common::temp_project::TempProject;
@@ -164,4 +165,44 @@ fn config_create_creates_config_file() {
     assert!(Config::exists().unwrap());
 
     reset_config_dir_env();
+}
+
+#[test]
+#[serial]
+fn existing_config_skips_onboarding() {
+    let dir = TempDir::new().unwrap();
+
+    unsafe {
+        std::env::set_var("DEVCLI_CONFIG_DIR", dir.path());
+        std::env::set_var("DEVCLI_SKIP_ONBOARDING", "1");
+    }
+
+    Config::default().save().unwrap();
+
+    ensure_onboarded().unwrap();
+
+    unsafe {
+        std::env::remove_var("DEVCLI_CONFIG_DIR");
+        std::env::remove_var("DEVCLI_SKIP_ONBOARDING");
+    }
+}
+
+#[test]
+#[serial]
+fn config_exists_after_save() {
+    let dir = TempDir::new().unwrap();
+
+    unsafe {
+        std::env::set_var("DEVCLI_CONFIG_DIR", dir.path());
+    }
+
+    assert!(!Config::exists().unwrap());
+
+    Config::default().save().unwrap();
+
+    assert!(Config::exists().unwrap());
+
+    unsafe {
+        std::env::remove_var("DEVCLI_CONFIG_DIR");
+    }
 }
