@@ -1,7 +1,9 @@
-//! Keyboard event handling.
+//! Keyboard event handling for the TUI.
+
+use std::time::Duration;
 
 use anyhow::Result;
-use crossterm::event::{self, Event, KeyCode};
+use crossterm::event::{self, Event, KeyCode, KeyEvent};
 
 use super::state::AppState;
 
@@ -11,19 +13,24 @@ pub fn handle_events(state: &mut AppState) -> Result<()> {
 }
 
 /// Generic event handler used by tests.
-pub fn handle_events_with<P, R>(state: &mut AppState, mut poll: P, mut read: R) -> Result<()>
+pub fn handle_events_with<P, R>(state: &mut AppState, poll: P, read: R) -> Result<()>
 where
-    P: FnMut(std::time::Duration) -> std::io::Result<bool>,
-    R: FnMut() -> std::io::Result<Event>,
+    P: Fn(Duration) -> Result<bool, std::io::Error>,
+    R: Fn() -> Result<Event, std::io::Error>,
 {
-    if poll(std::time::Duration::from_millis(16))?
+    if poll(Duration::from_millis(50))?
         && let Event::Key(key) = read()?
     {
-        match key.code {
-            KeyCode::Char('q') | KeyCode::Esc => state.quit(),
-            _ => {}
-        }
+        handle_key(key, state);
     }
 
     Ok(())
+}
+
+/// Handle a single keypress.
+pub fn handle_key(key: KeyEvent, state: &mut AppState) {
+    match key.code {
+        KeyCode::Char('q') | KeyCode::Esc => state.quit(),
+        _ => {}
+    }
 }

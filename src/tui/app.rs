@@ -1,4 +1,5 @@
 //! Ratatui application entrypoint.
+
 use std::io::{Stdout, stdout};
 
 use anyhow::Result;
@@ -30,7 +31,7 @@ pub fn run() -> Result<()> {
     result
 }
 
-#[doc(hidden)]
+/// Creates a fresh state and runs the event loop.
 pub fn run_loop<B, F>(terminal: &mut Terminal<B>, handle_events: F) -> Result<()>
 where
     B: Backend,
@@ -38,10 +39,10 @@ where
     F: FnMut(&mut AppState) -> Result<()>,
 {
     let mut state = AppState::new();
-
     run_loop_with_state(terminal, &mut state, handle_events)
 }
 
+/// Testable event loop that accepts an existing state.
 pub fn run_loop_with_state<B, F>(
     terminal: &mut Terminal<B>,
     state: &mut AppState,
@@ -60,12 +61,6 @@ where
     Ok(())
 }
 
-#[doc(hidden)]
-pub fn tick(state: &mut AppState) -> Result<()> {
-    event::handle_events(state)
-}
-
-/// Restore the user's terminal after exiting the TUI.
 fn restore_terminal(mut terminal: Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
