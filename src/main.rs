@@ -8,7 +8,8 @@
 //! - Initialise logging.
 //! - Parse CLI arguments using `clap`.
 //! - Dispatch commands to the library crate.
-//!
+
+mod tui;
 use anyhow::Result;
 use clap::Parser;
 
@@ -25,10 +26,12 @@ fn main() -> Result<()> {
     onboarding::ensure_onboarded()?;
 
     match cli.command {
-        Commands::Project(cmd) => commands::project::execute(cmd)?,
-        Commands::Config(cmd) => commands::config::execute(cmd)?,
-        Commands::Ide(cmd) => commands::ide::execute(cmd)?,
-        Commands::Open(args) => commands::project::open_shortcut(args)?,
+        Some(Commands::Project(cmd)) => commands::project::execute(cmd)?,
+        Some(Commands::Config(cmd)) => commands::config::execute(cmd)?,
+        Some(Commands::Ide(cmd)) => commands::ide::execute(cmd)?,
+        Some(Commands::Open(args)) => commands::project::open_shortcut(args)?,
+
+        None => tui::run()?,
     }
 
     Ok(())
