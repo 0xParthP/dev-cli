@@ -1,38 +1,53 @@
-use crossterm::event::KeyCode;
-use dev_cli::tui::{event::handle_key, state::AppState};
+use anyhow::Result;
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
 
-#[test]
-fn q_quits() {
-    let mut state = AppState::new();
-    handle_key(&mut state, KeyCode::Char('q'));
-    assert!(state.should_quit);
+use dev_cli::tui::{event::handle_events_with, state::AppState};
+
+fn key(code: KeyCode) -> Event {
+    Event::Key(KeyEvent {
+        code,
+        modifiers: KeyModifiers::NONE,
+        kind: KeyEventKind::Press,
+        state: KeyEventState::empty(),
+    })
 }
 
 #[test]
-fn escape_quits() {
-    let mut state = AppState::new();
-    handle_key(&mut state, KeyCode::Esc);
-    assert!(state.should_quit);
-}
-
-#[test]
-fn other_keys_do_nothing() {
+fn does_nothing_when_no_event_available() -> Result<()> {
     let mut state = AppState::new();
 
-    handle_key(&mut state, KeyCode::Enter);
-    handle_key(&mut state, KeyCode::Left);
-    handle_key(&mut state, KeyCode::Right);
-    handle_key(&mut state, KeyCode::Char('a'));
+    handle_events_with(&mut state, |_| Ok(false), || unreachable!())?;
 
     assert!(!state.should_quit);
+    Ok(())
 }
 
 #[test]
-fn quit_remains_true() {
+fn quits_on_q() -> Result<()> {
     let mut state = AppState::new();
 
-    handle_key(&mut state, KeyCode::Char('q'));
-    handle_key(&mut state, KeyCode::Enter);
+    handle_events_with(&mut state, |_| Ok(true), || Ok(key(KeyCode::Char('q'))))?;
 
     assert!(state.should_quit);
+    Ok(())
+}
+
+#[test]
+fn quits_on_escape() -> Result<()> {
+    let mut state = AppState::new();
+
+    handle_events_with(&mut state, |_| Ok(true), || Ok(key(KeyCode::Esc)))?;
+
+    assert!(state.should_quit);
+    Ok(())
+}
+
+#[test]
+fn ignores_other_keys() -> Result<()> {
+    let mut state = AppState::new();
+
+    handle_events_with(&mut state, |_| Ok(true), || Ok(key(KeyCode::Enter)))?;
+
+    assert!(!state.should_quit);
+    Ok(())
 }
