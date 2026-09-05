@@ -1,5 +1,4 @@
 //! Ratatui application entrypoint.
-
 use std::io::{Stdout, stdout};
 
 use anyhow::Result;
