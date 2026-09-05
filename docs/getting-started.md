@@ -7,12 +7,13 @@ Welcome to `dev-cli`! This guide will help you install, configure, and use the t
 ## Table of Contents
 
 1. [Installation](#installation)
-2. [Initial Configuration](#initial-configuration)
-3. [First Steps](#first-steps)
-4. [Common Tasks](#common-tasks)
-5. [Troubleshooting](#troubleshooting)
-6. [Platform-Specific Notes](#platform-specific-notes)
-7. [Next Steps](#next-steps)
+2. [First-Run Onboarding](#first-run-onboarding)
+3. [Configuration](#configuration)
+4. [First Steps](#first-steps)
+5. [Common Tasks](#common-tasks)
+6. [Troubleshooting](#troubleshooting)
+7. [Platform-Specific Notes](#platform-specific-notes)
+8. [Next Steps](#next-steps)
 
 ---
 
@@ -21,35 +22,26 @@ Welcome to `dev-cli`! This guide will help you install, configure, and use the t
 ### Requirements
 
 - **Windows, macOS, or Linux**
-- **Rust 1.88+** (only if building from source)
+- **Rust 1.88+** (only if building from source; edition 2024)
+- **`cargo-llvm-cov`** (only required for the local coverage gate)
 - **Git** (for development)
 
 ### Option 1: Build from Source (Recommended)
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/dev-cli.git
+git clone https://github.com/0xParthP/dev-cli.git
 cd dev-cli
 
-# Build release binary
+# Build the release binary
 cargo build --release
 
-# Binary is at: target/release/dev (or target/release/dev.exe on Windows)
+# Binary located at: target/release/dev (or target/release/dev.exe on Windows)
 ```
 
 ### Option 2: Download Pre-built Binary
 
-(Coming soon — pre-built binaries will be available on GitHub releases)
-
-### Option 3: Install Globally (Windows)
-
-If you already have `dev` installed:
-
-```bash
-dev install
-```
-
-This copies the executable to `~/.local/bin/` and prints instructions for adding it to PATH.
+Download the binary for your operating system and add it to your PATH.
 
 ### Verify Installation
 
@@ -58,67 +50,77 @@ dev --version
 dev --help
 ```
 
+`dev --help` shows a one-line usage header followed by the subcommand list and the global options — pure `clap`-generated output, no business logic in the binary.
+
 ---
 
-## Initial Configuration
+## First-Run Onboarding
 
-### Automatic Setup
+When you run **any** `dev` command for the first time in an interactive terminal, the **onboarding wizard** launches. It asks you to:
 
-When you run `dev` for the first time, it automatically creates a configuration file with defaults:
+1. Choose one or more directories that contain your Git projects.
+2. Pick the IDE you want to launch by default.
 
-```bash
-dev config show
-```
+The wizard writes the answers to `config.toml` and is then skipped on subsequent runs. In CI, tests, or any non-interactive shell the wizard is bypassed and a default config is written instead. You can force-bypass the wizard for a single run with `DEVCLI_SKIP_ONBOARDING=1`.
 
-**Output:**
-```
-projects_root = ["C:\\Users\\YourName\\Projects"]
-default_ide = "vscode"
-```
-
-### Manual Setup (Optional)
-
-To initialize with defaults explicitly:
+Re-run the same setup at any time with:
 
 ```bash
-dev config init
+dev config init        # writes defaults if missing
+dev config show        # prints the active configuration
 ```
 
-This creates the configuration file if it doesn't exist.
+---
 
-### Configuration Location
+## Configuration
 
-The configuration file is stored at a platform-specific location:
+### Where the Config File Lives
 
-- **Windows:** `C:\Users\{YourName}\AppData\Local\dev-cli\config\config.toml`
-- **macOS:** `~/.config/dev-cli/config.toml`
+- **Windows:** `C:\Users\{YourName}\AppData\Roaming\dev-cli\config\config.toml`
+- **macOS:** `~/Library/Application Support/dev-cli/config/config.toml`
 - **Linux:** `~/.config/dev-cli/config.toml`
 
-You can edit this file directly:
+### File Format
 
 ```toml
-# ~/.config/dev-cli/config.toml
-
 projects_root = [
     "C:/Users/parth/Projects",
     "C:/Users/parth/Work",
-    "C:/Users/parth/Side"
+    "C:/Users/parth/Side",
 ]
 
 default_ide = "cursor"
 ```
 
+### Edit the Config
+
+Three options:
+
+1. **Edit the file directly.** It is a plain TOML file; save and run `dev config show` to confirm.
+2. **Use the CLI.** `dev config set-default-ide cursor` writes the change for you.
+3. **Reset.** Delete the file and let `dev` recreate it. A missing file is non-fatal — `Config::load()` writes defaults. A parse error is also non-fatal: a message is logged on stderr and a fresh default config is written in its place.
+
 ---
 
 ## First Steps
 
-### 1. List Configured Project Directories
+### 1. List Configured Project Roots and Discovered Repositories
 
 ```bash
 dev project list
 ```
 
-Shows all directories where `dev` will search for projects.
+Shows the configured `projects_root` directories **and** the Git repositories the scanner discovered under them.
+
+```
+Configured Project Roots
+📁 C:\Users\parth\Projects
+📁 C:\Users\parth\Work
+
+Discovered Git Repositories
+• dev-cli (...Projects\dev-cli)
+• blog (...Projects\blog)
+```
 
 ### 2. Detect Installed IDEs
 
@@ -126,9 +128,8 @@ Shows all directories where `dev` will search for projects.
 dev ide list
 ```
 
-Lists all IDEs detected on your system with their full paths.
+Lists every IDE detected on your system with its full path.
 
-**Sample output:**
 ```
 Installed IDEs:
 ✓ VS Code (C:\Program Files\Microsoft VS Code\bin\code.cmd)
@@ -140,21 +141,20 @@ Installed IDEs:
 ### 3. Open Your First Project
 
 ```bash
-# Assuming you have a project called "MyProject"
-# in your Projects directory
-
-dev open MyProject
+# Opens the first repository named "dev-cli" under your projects_root
+dev open dev-cli
 ```
 
-This opens `MyProject` in your default IDE.
+This launches the project in your default IDE.
 
 ### 4. Open in a Specific IDE
 
 ```bash
-dev open MyProject --ide cursor
+dev open dev-cli --ide cursor
 ```
 
-**Available IDE identifiers:**
+**Available IDE identifiers** (parsed by `Ide`'s `ValueEnum`):
+
 - `vscode` — VS Code
 - `cursor` — Cursor
 - `claude` — Claude Code
@@ -162,6 +162,8 @@ dev open MyProject --ide cursor
 - `idea` — IntelliJ IDEA
 - `rider` — JetBrains Rider
 - `zed` — Zed Editor
+
+> **Note:** VS Code, Cursor, Claude Code, and Windows Terminal have launch arms in the IDE launcher today. `idea`, `rider`, and `zed` are recognised by the enum so the CLI accepts them, but launching them currently surfaces an "unsupported IDE" error.
 
 ---
 
@@ -174,11 +176,11 @@ Edit `config.toml` to point to your actual project folders:
 ```toml
 projects_root = [
     "C:/Users/parth/Projects",
-    "C:/Users/parth/Work"
+    "C:/Users/parth/Work",
 ]
 ```
 
-Now `dev` will search these directories for projects.
+Now `dev` searches these directories for projects.
 
 ### Set Your Default IDE
 
@@ -186,23 +188,23 @@ Now `dev` will search these directories for projects.
 dev config set-default-ide cursor
 ```
 
-Now all `dev open <project>` commands use Cursor by default.
+All `dev open <project>` commands now use Cursor by default.
 
-### Open Projects Without Specifying IDE
+### Open Without Specifying an IDE
 
 ```bash
-dev open MyProject
+dev open dev-cli
 ```
 
 Uses your configured default IDE.
 
-### Use Different IDE for One Project
+### Override the IDE for One Project
 
 ```bash
-dev open MyProject --ide vscode
+dev open dev-cli --ide vscode
 ```
 
-Uses VS Code for this one project, but doesn't change your default.
+Uses VS Code for this project only; the default is unchanged.
 
 ### View Your Current Configuration
 
@@ -210,7 +212,17 @@ Uses VS Code for this one project, but doesn't change your default.
 dev config show
 ```
 
-Displays the complete active configuration.
+Displays the active configuration.
+
+### Run the Full Local CI Check
+
+Before opening a PR, mirror what CI will run:
+
+```bash
+cargo xtask ci
+```
+
+This runs `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test`, and the 80% line-coverage gate. See [docs/xtask.md](xtask.md).
 
 ---
 
@@ -224,10 +236,11 @@ dev open UnknownProject
 ```
 
 **Solution:**
-1. Check spelled correctly
-2. Verify project is in one of your `projects_root` directories
-3. Run `dev project list` to see configured directories
-4. Add the directory to config.toml if needed
+
+1. Check the name is spelled correctly.
+2. Verify the project is in one of your `projects_root` directories and contains a `.git` entry — the scanner only finds Git repositories.
+3. Run `dev project list` to see configured roots and discovered repos.
+4. Add the directory to `config.toml` if needed.
 
 ### IDE Not Detected
 
@@ -237,20 +250,10 @@ dev ide list
 ```
 
 **Solution:**
-1. Ensure IDE is actually installed
-2. Try restarting terminal/shell
-3. IDE may be in a non-standard location — add it manually to PATH or config (future feature)
 
-### Can't Find dev Command
-
-```bash
-dev: command not found
-```
-
-**Solution:**
-1. Did you build it? `cargo build --release`
-2. Is it in PATH? Add `~/.local/bin` to PATH
-3. Run `dev install` to install globally
+1. Confirm the IDE is actually installed.
+2. Try restarting your terminal/shell so `PATH` updates are picked up.
+3. The IDE may be in a non-standard location — install its CLI shim and put it on `PATH`. The detector tries `which` first, then platform-standard install locations.
 
 ### Configuration File Issues
 
@@ -260,17 +263,19 @@ dev config show
 ```
 
 **Solution:**
-1. Check syntax: Use an online TOML validator
-2. Reset config: Delete the config file and re-run `dev config init`
-3. Check permissions: Ensure you can write to config directory
+
+1. Check the syntax with an online TOML validator.
+2. As a last resort, delete the file and let `dev` recreate it. A parse error is **not** fatal — `dev` logs a clear message on stderr and writes a fresh config.
+3. Check permissions on the config directory.
 
 ### Slow Performance
 
 If `dev` is noticeably slow:
 
-1. **IDE detection slow:** This is expected if scanning many PATHs
-2. **Config load slow:** Shouldn't happen (< 10ms)
-3. **Project open slow:** Mostly waiting for IDE to start (not our control)
+1. **IDE detection slow:** Expected if `PATH` is very long. Detection runs on every invocation by design (no cache).
+2. **Config load slow:** Shouldn't happen (< 10 ms).
+3. **Project open slow:** Mostly waiting for the IDE to start (out of our control).
+4. **Scanner slow on huge trees:** Honours `.gitignore` via the `ignore` crate, so `target/`, `node_modules/`, etc. are skipped automatically.
 
 ---
 
@@ -278,21 +283,12 @@ If `dev` is noticeably slow:
 
 ### Windows
 
-**PATH Configuration:**
-After `dev install`, add `C:\Users\{YourName}\.local\bin` to your PATH:
-
-1. Press `Win + X`, select "System"
-2. Click "Advanced system settings"
-3. Click "Environment Variables"
-4. Under "User variables", select "Path" and click "Edit"
-5. Click "New" and add `C:\Users\{YourName}\.local\bin`
-6. Click "OK" and restart terminal
-
 **IDEs:**
-- VS Code is auto-detected from standard install location
-- Cursor is auto-detected from standard install location
-- Windows Terminal is detected via PATH
-- For custom locations, edit config.toml
+
+- VS Code is auto-detected from the standard install location.
+- Cursor is auto-detected from the standard install location.
+- Windows Terminal is detected via `PATH`.
+- For custom locations, install the IDE's CLI shim and add it to `PATH`.
 
 **PowerShell Note:**
 If using PowerShell, you may need to allow execution of scripts:
@@ -303,27 +299,22 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ### macOS
 
 **Installation:**
-After building, copy binary to PATH:
+After building, copy the binary to `PATH`:
 ```bash
 cp target/release/dev /usr/local/bin/
 ```
 
-Or use the built-in installer concept:
-```bash
-cargo run -- install
-# (installer will place in ~/.local/bin)
-```
-
 **IDEs:**
-- Applications are auto-detected from `/Applications`
-- CLI tools from PATH
+
+- Applications are auto-detected from `/Applications`.
+- CLI tools from `PATH`.
 
 ### Linux
 
 **Installation:**
 ```bash
 cp target/release/dev ~/.local/bin/
-export PATH="$HOME/.local/bin:$PATH"  # Add to ~/.bashrc or ~/.zshrc
+export PATH="$HOME/.local/bin:$PATH"  # Add to ~/.bashrc or .zshrc
 ```
 
 **Permissions:**
@@ -332,22 +323,24 @@ chmod +x ~/.local/bin/dev
 ```
 
 **IDEs:**
-- Detected from standard locations
-- Add custom locations via PATH or config.toml
+
+- Detected from standard locations.
+- Add custom locations via `PATH` or `config.toml`.
 
 ---
 
 ## Next Steps
 
-1. **Explore the full documentation:** See [docs/](../docs/) directory
-2. **Understand the architecture:** Read [ARCHITECTURE.md](../ARCHITECTURE.md)
-3. **Configure for your workflow:** Edit config.toml
+1. **Explore the full documentation:** See [docs/](../docs/) directory.
+2. **Understand the architecture:** Read [ARCHITECTURE.md](../ARCHITECTURE.md).
+3. **Configure for your workflow:** Edit `config.toml`.
 4. **Create aliases (optional):**
    ```bash
    # Add to .bashrc or .zshrc
    alias do="dev open"
    ```
-5. **Learn about upcoming features:** Read [docs/roadmap.md](../docs/roadmap.md)
+5. **Learn about upcoming features:** Read [docs/roadmap.md](../docs/roadmap.md).
+6. **Contribute:** Read [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ---
 

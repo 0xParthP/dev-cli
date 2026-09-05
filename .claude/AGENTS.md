@@ -102,8 +102,7 @@ commands/
 ├── mod.rs       # Module exports
 ├── project.rs   # dev project list, dev open
 ├── config.rs    # dev config ...
-├── ide.rs       # dev ide list
-└── install.rs   # dev install
+└── ide.rs       # dev ide list
 ```
 
 **Rule:** Each command module has public `execute()` function:
@@ -215,28 +214,6 @@ models/
 ```
 
 **Typical size:** < 100 lines per file
-
----
-
-### `src/installer.rs`
-
-**Responsibility:** Handle `dev install` command (global installation)
-
-**Allowed actions:**
-- ✅ Copy executable to install location
-- ✅ Prompt for PATH addition
-- ✅ Initialize default config
-
-**Forbidden:**
-- ❌ Modify environment variables
-- ❌ Spawn shells directly
-- ❌ System-level operations beyond file copy
-
-**Depends on:**
-- `directories` — find .local/bin
-- `config` — initialize defaults
-
-**Typical size:** < 100 lines
 
 ---
 

@@ -10,20 +10,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
-- Complete documentation suite (ARCHITECTURE.md, CONTRIBUTING.md, CLAUDE.md, AGENTS.md)
-- Comprehensive docs/ guides covering project structure, CLI design, configuration, IDE system, testing, roadmap
-- mdBook project documentation ("Building dev-cli in Rust")
-- Rustdoc comments for all public APIs and modules
-- Module-level documentation (`//!` comments) for all modules
-- Code examples in rustdoc comments
+- Comprehensive onboarding test suite in `tests/onboarding.rs` covering the
+  first-start wizard's non-interactive paths and the `is_interactive_terminal`
+  helper. New `serial_test` dependency keeps env-driven tests deterministic.
+- `src/startup.rs` extracted from `main.rs` so `onboarding::ensure_onboarded`
+  can be reused and tested in isolation.
+- `Config::exists()` helper used by the startup flow to skip the wizard on
+  subsequent runs.
 
 ### Changed
-- Improved README.md with professional formatting, feature table, command reference
-- Enhanced error messages for better user experience
-- Restructured documentation for clarity
+- Reorganized the top-level documentation pass around the real on-disk layout
+  (`lib.rs` exposes the library, `tests/` is the only home for tests,
+  `xtask/` is the developer entry point, etc.).
+- Updated every `docs/*.md` to reflect the current code (install command,
+  onboarding wizard, scanner integration, 80% coverage gate, branch naming,
+  `cargo xtask ci`).
 
 ### Fixed
-- (none yet for this sprint)
+- Branch-name pre-commit hook and `branch-name.yml` workflow now reject
+  names that don't match `^(feature|fix|docs|refactor|chore)/[a-z0-9-]+$`
+  (kebab-case). The previous pattern allowed spaces and other characters.
+- `Config::load` no longer panics when the config file is missing during
+  CI runs — it writes the defaults and returns, and on a parse error it
+  recreates a valid file with an explanatory message on stderr.
 
 ### Added (infrastructure bootstrap)
 - Claude workspace: `.claude/knowledge/` (architecture, modules, testing, conventions, build-system, dependency-map, development-workflow, api, architecture-diagrams) and `.claude/memory/` (decisions, implementation-notes, roadmap, progress, known-bugs, refactors)
@@ -40,105 +49,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.1.0] - 2026
+## [0.2.0] - 2026
 
 ### Added
-- Core CLI application with Clap-based argument parsing
-- Project management commands: `dev project list`, `dev project open`, `dev open`
-- Configuration management: `dev config show`, `dev config init`, `dev config set-default-ide`
-- IDE detection system supporting 7 IDE types (VS Code, Cursor, Claude Code, Windows Terminal, IntelliJ, Rider, Zed)
-- Multi-stage IDE detection (PATH lookup, common Windows locations)
-- IDE launching functionality with proper error handling
-- Global installation command: `dev install`
-- TOML-based configuration file format with serde
-- Cross-platform configuration directory handling using `directories` crate
-- Integration tests for CLI commands (cli_config.rs, cli_ide.rs, cli_open.rs)
-- Colored output support with `owo-colors`
-- Error handling with `anyhow` Result type
+- First-run onboarding wizard (`src/onboarding.rs`). When invoked on a TTY
+  with no `config.toml` present, it walks the user through choosing
+  `projects_root` directories and a default IDE, then writes the config.
+  CI/test runs opt out via `DEVCLI_SKIP_ONBOARDING=1`.
+- Repository scanner (`src/scanner.rs`) using the `ignore` crate — `dev
+  project list` now reports the Git repos it discovers under the configured
+  roots, honouring `.gitignore` and pruning at the `.git` boundary.
+- Library crate (`src/lib.rs`) so integration tests can `use dev_cli::…`.
+- `src/startup.rs` orchestrating onboarding and config loading.
+- `src/utils/path.rs` with `display_path` for friendlier Windows path
+  output.
+- `cargo xtask ci` as the canonical pre-commit / CI entry point (format,
+  clippy, test, coverage, security). `cargo xtask install` mirrors the
+  install command for developers.
+- 80% line-coverage gate enforced in `cargo xtask ci`.
+- Branch-name policy enforced in both the local pre-commit hook and the
+  `branch-name.yml` workflow: names must match
+  `^(feature|fix|docs|refactor|chore)/[a-z0-9-]+$`.
+- Sonar workflow for code-quality analysis.
 
-### Features
-- **Commands:**
-  - `dev project list` - List configured project root directories
-  - `dev project open <NAME>` - Open project in default IDE
-  - `dev open <NAME> --ide <IDE>` - Open project in specific IDE
-  - `dev config show` - Display configuration
-  - `dev config init` - Initialize default configuration
-  - `dev config set-default-ide <IDE>` - Set default IDE
-  - `dev ide list` - List detected installed IDEs
-  - `dev install` - Install to system PATH
+### Changed
+- Help menu restructured: `dev --help` now prints a one-line "usage" header,
+  a list of all subcommands, and the global options in that order.
+- `dev project list` shows the discovered repositories in addition to the
+  configured project roots.
+- Project paths are rendered through `display_path` for cleaner Windows
+  output (e.g. collapsing `C:\Users\parth\Projects\…` to `…\Projects\…`).
+- All production code follows the no-`unwrap` rule; tests use `serial_test`
+  to remove env-var races.
 
-- **IDE Support:**
-  - VS Code (code)
-  - Cursor (cursor)
-  - Claude Code (claude)
-  - Windows Terminal (wt)
-  - IntelliJ IDEA (planned)
-  - JetBrains Rider (planned)
-  - Zed Editor (planned)
+### Fixed
+- `Config::load` no longer panics when the config file is missing or
+  unparseable — missing files are created with defaults; parse errors
+  surface a clear message and write a fresh config.
+- Pre-commit hook no longer overwrites files via `git add -A` after
+  `cargo fmt`; only the formatted files are added.
 
-- **Configuration:**
-  - Project root directories (searchable paths)
-  - Default IDE preference
-  - TOML format at platform-specific location
-  - Auto-creation of default config
-
-### Architecture
-- Layered architecture (CLI → Commands → Services → Models)
-- Clear separation of concerns
-- Reusable service modules
-- Extensible command structure
-
-### Testing
-- Integration tests using `assert_cmd` and `predicates`
-- Test coverage for main commands
-- Temporary file handling for test isolation
-
----
-
-## Sprint Progress
-
-### Sprint 1.0 - 1.6 ✅
-- Initial CLI architecture
-- Configuration system
-- IDE detection and launching
-- Basic commands
-- Integration tests
-- Error handling
-
-### Sprint 1.7 - Documentation Pass 🚀
-- Complete ARCHITECTURE.md with diagrams
-- Professional README.md
-- CONTRIBUTING.md for developers
-- CLAUDE.md for AI assistants
-- AGENTS.md for agent configuration
-- docs/ guides (9 comprehensive guides)
-- mdBook project documentation
-- Rustdoc comments for all public APIs
-- Module documentation
-- Code examples and explanations
-
-### Sprint 2 - Repository Scanner 🔄
-- Automatic .git repository discovery
-- Project metadata extraction
-- Caching system
-- Watch mode for changes
-- Update `dev project list` to use auto-discovered projects
-
-### Sprint 3 - Git Integration 🔄
-- Show current branch for each project
-- Display uncommitted changes
-- Recent commit history
-- Filter projects by branch
-- Git status in project list
-
-### Sprint 4+ - Dashboard & TUI 🔄
-- Interactive terminal UI
-- Browse projects with keyboard navigation
-- Preview project status in real-time
-- Search and filter
-- Open project with single keystroke
-
----
+--- 
 
 ## Known Issues
 
@@ -150,7 +101,7 @@ None currently known. Please report issues on GitHub.
 
 | Feature | Sprint | Status |
 |---------|--------|--------|
-| Automatic repository scanning | 2 | 🔄 Planned |
+| Automatic repository scanning | 2 | ✅ Shipped |
 | Git branch integration | 3 | 🔄 Planned |
 | Project templates | 4 | 🔄 Planned |
 | Interactive TUI dashboard | 5 | 🔄 Planned |

@@ -4,12 +4,12 @@
 
 ## Detection
 
-Detection runs in two stages and merges the results:
+Detection runs in two stages and merges the results, deduplicating by executable path:
 
 1. **PATH lookup** — for each supported CLI shim (`code`, `cursor`, `claude`, `wt`), ask the `which` crate where it lives. PATH is checked first because it's the fastest, most common case, and any user with a CLI install will be found here.
 2. **Common install paths** — for IDEs that often ship without a CLI on PATH, check the platform's standard locations. On Windows that means `%LocalAppData%\Programs\Microsoft VS Code\bin\code.cmd`, `%LocalAppData%\Programs\Cursor\Cursor.exe`, `~/.local/bin/claude.exe`, and similar.
 
-The two stages run sequentially and we deduplicate as we go — if `which code` already found VS Code in PATH, the second stage skips it. The output is a `Vec<InstalledIde>` sorted in a stable order.
+The two stages run sequentially; if `which code` already found VS Code in PATH, the second stage skips it. The output is a `Vec<InstalledIde>` sorted in a stable order.
 
 Detection runs on every `dev` invocation. It is fast (single-digit milliseconds for PATH; filesystem `exists()` checks for the rest), and re-running it means a newly installed IDE is picked up immediately with no cache invalidation. We don't cache.
 
@@ -30,6 +30,8 @@ fn detect_ides() -> Vec<InstalledIde> {
 }
 ```
 
+For tests, the path is resolved through `which::which_in(...)` first and then a small set of standard locations. Tests stub the executable lookup by setting `DEVCLI_TEST_EXECUTABLE` to an absolute path, so the launcher tests can be hermetic.
+
 ## Registry
 
 ```rust
@@ -44,25 +46,23 @@ pub struct InstalledIde {
 
 ## Launching
 
-`launcher::launch(ide, &project_path)` maps the `Ide` enum to a command name, then runs it as a subprocess with the project path as the argument.
+`launcher::launch(ide, &project_path)` looks the IDE up in the detected list, then spawns it as a subprocess. The spawn shape depends on the IDE:
+
+- **VS Code** / **Cursor** — `code <path>` / `cursor <path>`
+- **Claude Code** — `claude` in the project's working directory
+- **Windows Terminal** — `wt -d <path>`
 
 ```rust
 pub fn launch(ide: Ide, path: &Path) -> Result<()> {
-    let cmd = match ide {
-        Ide::Vscode   => "code",
-        Ide::Cursor   => "cursor",
-        Ide::Claude   => "claude",
-        Ide::Terminal => "wt",
-        _ => bail!("IDE {:?} is not yet wired up", ide),
-    };
-
-    Command::new(cmd)
-        .arg(path)
-        .spawn()?;
-
-    Ok(())
+    let installed = detect_ides()
+        .into_iter()
+        .find(|i| i.ide == ide)
+        .ok_or_else(|| anyhow!("{:?} is not installed", ide))?;
+    launch_spawn(ide, path, &installed.path)
 }
 ```
+
+`launch_spawn` is the small per-IDE switch that maps an `Ide` to its CLI shape. Variants that aren't wired up (`idea`, `rider`, `zed`) currently return an "unsupported IDE" error — they parse via `ValueEnum` so the CLI accepts them, but launching will need a new arm.
 
 We `spawn` and return — we don't `wait`. The IDE is a long-lived process; waiting for it would mean `dev open` doesn't return until the user closes their editor. If the IDE crashes immediately, the error surfaces on the next read of the child process's stderr; for a quick check, the user can run the same command in a terminal and see the IDE's own error.
 
@@ -70,7 +70,7 @@ We `spawn` and return — we don't `wait`. The IDE is a long-lived process; wait
 
 1. Add a variant to `Ide` in `src/models/ide.rs` (this is what makes `--ide <name>` parse).
 2. Add a `detect_cli` call in `detect.rs` for the CLI shim, or a path check in `detect_common_install_paths` for a GUI-only install.
-3. Add a `match` arm in `launcher.rs` mapping the variant to the command name.
+3. Add a `match` arm in `launcher.rs` mapping the variant to its spawn shape (and, if the IDE needs a non-default CLI invocation, extend `launch_spawn`).
 4. Add a unit test for the enum parsing and an integration test for `dev ide list`.
 
 That's the whole contract. Clap picks up the new variant for `--ide` automatically, the detection stages see it on the next run, and the launcher has the spawn command.

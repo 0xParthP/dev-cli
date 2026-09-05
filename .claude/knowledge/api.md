@@ -13,7 +13,6 @@
 | `dev config show` | Print config with `{:#?}` |
 | `dev config set-default-ide <IDE>` | Update and save `default_ide` |
 | `dev ide list` | Print detected installed IDEs |
-| `dev install` | Copy exe to install dir, init config |
 | `dev --help` / `dev --version` | Clap help/version |
 
 IDE values (ValueEnum): `cursor | vscode | claude | terminal | idea | rider | zed`.

@@ -26,12 +26,10 @@ main.rs ─────────────► commands/* ──────
 | `src/commands/project.rs` | `dev project list/open`, `dev open` | `execute`, `open`, `list_projects`, `open_shortcut` |
 | `src/commands/config.rs` | `dev config init/show/set-default-ide` | `execute` |
 | `src/commands/ide.rs` | `dev ide list` | `execute`, `list` |
-| `src/commands/install.rs` | `dev install` | `execute` |
 | `src/config.rs` | Config load/save/path | `Config`, `Config::load/save/path` |
 | `src/ide/detect.rs` | IDE discovery (PATH → Windows paths) | `detect_ides` |
 | `src/ide/launcher.rs` | Spawn IDE processes | `launch` |
 | `src/ide/registry.rs` | Detected IDE type | `InstalledIde` |
-| `src/installer.rs` | Global install to `~/.local/bin` | `install`, `binary_install_dir` |
 | `src/scanner.rs` | Recursive `.git` discovery | `discover_projects` |
 | `src/utils/path.rs` | Path display helpers | `display_path` |
 | `xtask/` | Dev tooling (`cargo xtask ci/coverage`) | `ci`, `step`, `coverage_step` |
