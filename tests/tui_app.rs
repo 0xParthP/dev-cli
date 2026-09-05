@@ -1,10 +1,5 @@
 use anyhow::{Result, anyhow};
-use dev_cli::tui::{
-    app::{run_loop, tick},
-    event::handle_events,
-    state::AppState,
-    ui,
-};
+use dev_cli::tui::{app::run_loop, state::AppState, ui};
 use ratatui::{Terminal, backend::TestBackend};
 
 #[test]
@@ -20,39 +15,6 @@ fn app_state_quits() {
     let mut state = AppState::new();
     state.quit();
     assert!(state.should_quit);
-}
-
-#[test]
-fn handle_events_without_input_returns_ok() -> Result<()> {
-    let mut state = AppState::new();
-
-    handle_events(&mut state)?;
-
-    assert!(!state.should_quit);
-    Ok(())
-}
-
-#[test]
-fn handle_events_multiple_times() -> Result<()> {
-    let mut state = AppState::new();
-
-    for _ in 0..5 {
-        handle_events(&mut state)?;
-    }
-
-    assert!(!state.should_quit);
-    Ok(())
-}
-
-#[test]
-fn tick_delegates_to_event_handler() -> Result<()> {
-    let mut state = AppState::new();
-
-    tick(&mut state)?;
-
-    assert!(!state.should_quit);
-
-    Ok(())
 }
 
 #[test]
@@ -99,4 +61,30 @@ fn run_loop_propagates_errors() {
 
     assert!(err.is_err());
     assert!(err.unwrap_err().to_string().contains("boom"));
+}
+
+#[test]
+fn run_loop_with_existing_state_runs_until_quit() -> anyhow::Result<()> {
+    use dev_cli::tui::app::run_loop_with_state;
+    use ratatui::{Terminal, backend::TestBackend};
+
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend)?;
+
+    let mut state = AppState::new();
+    let mut ticks = 0;
+
+    run_loop_with_state(&mut terminal, &mut state, |state| {
+        ticks += 1;
+
+        if ticks == 3 {
+            state.quit();
+        }
+
+        Ok(())
+    })?;
+
+    assert_eq!(ticks, 3);
+
+    Ok(())
 }
