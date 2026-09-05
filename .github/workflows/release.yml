@@ -40,7 +40,7 @@ jobs:
 
           # macOS Intel
           - name: macOS-x64
-            os: macos-13
+            os: macos-15-intel
             target: x86_64-apple-darwin
             binary: dev
             archive: dev-macos-x86_64.tar.gz
@@ -53,6 +53,10 @@ jobs:
           targets: ${{ matrix.target }}
 
       - uses: Swatinem/rust-cache@master
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
 
       - name: Run tests
         run: cargo test-all
