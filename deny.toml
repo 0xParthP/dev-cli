@@ -18,12 +18,11 @@ ignore = []
 allow = [
     "MIT",
     "Apache-2.0",
-
-    # Used by unicode-ident
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
     "Unicode-3.0",
-
-    # Used by option-ext via directories
-    "MPL-2.0",
+    "Zlib",
 ]
 
 [bans]
