@@ -1,10 +1,10 @@
 //! Ratatui dashboard.
 
 pub mod app;
-mod event;
-mod state;
+pub mod event;
+pub mod state;
 mod theme;
-mod ui;
-mod widgets;
+pub mod ui;
+pub mod widgets;
 
 pub use app::run;
