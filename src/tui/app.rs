@@ -31,7 +31,8 @@ pub fn run() -> Result<()> {
     result
 }
 
-pub(crate) fn run_loop<B, F>(terminal: &mut Terminal<B>, handle_events: F) -> Result<()>
+#[doc(hidden)]
+pub fn run_loop<B, F>(terminal: &mut Terminal<B>, handle_events: F) -> Result<()>
 where
     B: Backend,
     B::Error: std::error::Error + Send + Sync + 'static,
@@ -58,6 +59,11 @@ where
     }
 
     Ok(())
+}
+
+#[doc(hidden)]
+pub fn tick(state: &mut AppState) -> Result<()> {
+    event::handle_events(state)
 }
 
 /// Restore the user's terminal after exiting the TUI.

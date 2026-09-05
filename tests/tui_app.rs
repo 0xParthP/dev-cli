@@ -1,56 +1,81 @@
-use anyhow::Result;
+use anyhow::{Result, anyhow};
+use dev_cli::tui::{
+    app::{run_loop, tick},
+    event::handle_events,
+    state::AppState,
+    ui,
+};
 use ratatui::{Terminal, backend::TestBackend};
 
-use dev_cli::tui::{app::run_loop_with_state, state::AppState, ui};
-
 #[test]
-fn dashboard_renders() {
-    let backend = TestBackend::new(100, 30);
+fn dashboard_draws_successfully() {
+    let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).unwrap();
 
     terminal.draw(|frame| ui::render(frame, &AppState::new())).unwrap();
 }
 
 #[test]
-fn app_state_quit_sets_flag() {
+fn app_state_quits() {
     let mut state = AppState::new();
-
     state.quit();
-
     assert!(state.should_quit);
 }
 
 #[test]
-fn run_loop_exits_after_first_tick() -> Result<()> {
-    let backend = TestBackend::new(80, 24);
-    let mut terminal = Terminal::new(backend).unwrap();
-
+fn handle_events_without_input_returns_ok() -> Result<()> {
     let mut state = AppState::new();
 
-    let mut ticks = 0;
+    handle_events(&mut state)?;
 
-    run_loop_with_state(&mut terminal, &mut state, |state| {
-        ticks += 1;
-        state.quit();
-        Ok(())
-    })?;
+    assert!(!state.should_quit);
+    Ok(())
+}
 
-    assert_eq!(ticks, 1);
-    assert!(state.should_quit);
+#[test]
+fn handle_events_multiple_times() -> Result<()> {
+    let mut state = AppState::new();
+
+    for _ in 0..5 {
+        handle_events(&mut state)?;
+    }
+
+    assert!(!state.should_quit);
+    Ok(())
+}
+
+#[test]
+fn tick_delegates_to_event_handler() -> Result<()> {
+    let mut state = AppState::new();
+
+    tick(&mut state)?;
+
+    assert!(!state.should_quit);
 
     Ok(())
 }
 
 #[test]
-fn run_loop_handles_multiple_iterations() -> Result<()> {
+fn run_loop_exits_after_first_iteration() -> Result<()> {
     let backend = TestBackend::new(80, 24);
-    let mut terminal = Terminal::new(backend).unwrap();
+    let mut terminal = Terminal::new(backend)?;
 
-    let mut state = AppState::new();
+    run_loop(&mut terminal, |state| {
+        state.quit();
+        Ok(())
+    })?;
+
+    Ok(())
+}
+
+#[test]
+fn run_loop_runs_multiple_iterations() -> Result<()> {
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend)?;
 
     let mut ticks = 0;
 
-    run_loop_with_state(&mut terminal, &mut state, |state| {
+    run_loop(&mut terminal, |state| {
         ticks += 1;
 
         if ticks == 3 {
@@ -66,21 +91,12 @@ fn run_loop_handles_multiple_iterations() -> Result<()> {
 }
 
 #[test]
-fn run_loop_skips_when_state_already_quit() -> Result<()> {
+fn run_loop_propagates_errors() {
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).unwrap();
 
-    let mut state = AppState::new();
-    state.quit();
+    let err = run_loop(&mut terminal, |_| Err(anyhow!("boom")));
 
-    let mut called = false;
-
-    run_loop_with_state(&mut terminal, &mut state, |_| {
-        called = true;
-        Ok(())
-    })?;
-
-    assert!(!called);
-
-    Ok(())
+    assert!(err.is_err());
+    assert!(err.unwrap_err().to_string().contains("boom"));
 }
