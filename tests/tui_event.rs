@@ -7,7 +7,7 @@ use dev_cli::{
     tui::{
         actions,
         event::{handle_events_with, handle_key, handle_key_with_launcher},
-        state::AppState,
+        state::{AppState, Tab},
     },
 };
 
@@ -268,4 +268,52 @@ fn poll_false_does_not_read_event() -> Result<()> {
     assert!(!state.should_quit);
 
     Ok(())
+}
+
+#[test]
+fn right_arrow_switches_tabs() {
+    let mut state = AppState::new();
+
+    handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE), &mut state);
+    assert_eq!(state.active_tab, Tab::Recent);
+
+    handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE), &mut state);
+    assert_eq!(state.active_tab, Tab::Ide);
+
+    handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE), &mut state);
+    assert_eq!(state.active_tab, Tab::Settings);
+}
+
+#[test]
+fn left_arrow_switches_tabs() {
+    let mut state = AppState::new();
+    state.active_tab = Tab::Settings;
+
+    handle_key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE), &mut state);
+    assert_eq!(state.active_tab, Tab::Ide);
+
+    handle_key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE), &mut state);
+    assert_eq!(state.active_tab, Tab::Recent);
+
+    handle_key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE), &mut state);
+    assert_eq!(state.active_tab, Tab::Projects);
+}
+
+#[test]
+fn left_arrow_does_not_go_before_projects() {
+    let mut state = AppState::new();
+
+    handle_key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE), &mut state);
+
+    assert_eq!(state.active_tab, Tab::Projects);
+}
+
+#[test]
+fn right_arrow_does_not_go_past_settings() {
+    let mut state = AppState::new();
+    state.active_tab = Tab::Settings;
+
+    handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE), &mut state);
+
+    assert_eq!(state.active_tab, Tab::Settings);
 }
