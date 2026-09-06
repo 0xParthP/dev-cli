@@ -1,18 +1,25 @@
-//! Search box widget.
+//! Search widget.
 
 use ratatui::{
     Frame,
     layout::Rect,
-    style::{Modifier, Style},
+    style::Style,
     widgets::{Block, Borders, Paragraph},
 };
 
-use crate::tui::theme;
+use crate::tui::{state::AppState, theme};
 
-pub fn render(frame: &mut Frame, area: Rect) {
-    let widget = Paragraph::new("> Search coming in Phase 4.3")
-        .block(Block::default().borders(Borders::ALL).title("Search"))
-        .style(Style::default().fg(theme::MUTED).add_modifier(Modifier::ITALIC));
+pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
+    let placeholder =
+        if state.search_query.is_empty() { "Search projects..." } else { &state.search_query };
 
-    frame.render_widget(widget, area);
+    frame.render_widget(
+        Paragraph::new(placeholder).block(
+            Block::default()
+                .title(" Search ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(theme::PRIMARY)),
+        ),
+        area,
+    );
 }

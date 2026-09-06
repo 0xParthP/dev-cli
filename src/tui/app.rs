@@ -39,6 +39,7 @@ where
     F: FnMut(&mut AppState) -> Result<()>,
 {
     let mut state = AppState::new();
+    state.set_projects(super::data::load_projects()?);
     run_loop_with_state(terminal, &mut state, handle_events)
 }
 

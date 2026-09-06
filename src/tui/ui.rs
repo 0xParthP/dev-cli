@@ -9,7 +9,7 @@ use ratatui::{
 
 use super::{state::AppState, theme, widgets};
 
-pub fn render(frame: &mut Frame, _state: &AppState) {
+pub fn render(frame: &mut Frame, state: &AppState) {
     frame.render_widget(Block::default().bg(theme::BACKGROUND), frame.area());
 
     let layout = Layout::default()
@@ -22,8 +22,8 @@ pub fn render(frame: &mut Frame, _state: &AppState) {
         ])
         .split(frame.area());
 
-    widgets::header::render(frame, layout[0]);
-    widgets::search::render(frame, layout[1]);
-    widgets::project_list::render(frame, layout[2]);
+    widgets::header::render(frame, layout[0], state);
+    widgets::search::render(frame, layout[1], state);
+    widgets::project_list::render(frame, layout[2], state);
     widgets::footer::render(frame, layout[3]);
 }
