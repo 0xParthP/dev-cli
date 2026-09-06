@@ -1,19 +1,34 @@
-use std::path::PathBuf;
-
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
 
 use dev_cli::{
-    models::project::Project,
+    config::Config,
+    models::{ide::Ide, project::Project},
     tui::{
+        actions,
         event::{handle_events_with, handle_key},
         state::AppState,
     },
 };
 
+use temp_env::with_var;
+use tempfile::TempDir;
+
+fn with_temp_config<F, R>(f: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    let dir = TempDir::new().unwrap();
+
+    with_var("DEVCLI_CONFIG_DIR", Some(dir.path()), f)
+}
+
 fn project(name: &str) -> Project {
-    let root = PathBuf::from("/tmp");
+    let root = std::env::temp_dir();
     let path = root.join(name);
+
+    // Ensure the fake project directory actually exists.
+    std::fs::create_dir_all(path.join(".git")).unwrap();
 
     Project { name: name.into(), path: path.clone(), root, git_dir: path.join(".git") }
 }
@@ -145,4 +160,37 @@ fn backspace_removes_character() {
     handle_key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE), &mut state);
 
     assert_eq!(state.search_query, "curso");
+}
+
+#[test]
+fn enter_key_does_nothing_without_projects() {
+    let mut state = AppState::new();
+
+    handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE), &mut state);
+
+    assert!(!state.should_quit);
+}
+
+#[test]
+fn open_project_calls_launcher() -> Result<()> {
+    with_temp_config(|| -> Result<()> {
+        // Give the test its own isolated config.
+        Config { projects_root: vec![std::env::temp_dir()], default_ide: Ide::Vscode }.save()?;
+
+        let project = project("demo");
+
+        let mut launched = None;
+
+        actions::open_project_with(&project, |ide, path| {
+            launched = Some((ide, path.to_path_buf()));
+            Ok(())
+        })?;
+
+        let (ide, path) = launched.expect("launcher should be called");
+
+        assert_eq!(ide, Ide::Vscode);
+        assert!(path.ends_with("demo"));
+
+        Ok(())
+    })
 }

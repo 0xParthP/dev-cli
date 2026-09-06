@@ -1,5 +1,6 @@
 //! Ratatui dashboard.
 
+pub mod actions;
 pub mod app;
 pub mod data;
 pub mod event;

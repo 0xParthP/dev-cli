@@ -26,7 +26,6 @@ impl AppState {
         self.should_quit = true;
     }
 
-    /// Projects matching the search query.
     pub fn filtered_projects(&self) -> Vec<&Project> {
         if self.search_query.is_empty() {
             return self.projects.iter().collect();
@@ -69,7 +68,6 @@ impl AppState {
         self.selected_index = 0;
     }
 
-    /// Clamp selection if filtering reduced the number of results.
     pub fn clamp_selection(&mut self) {
         let len = self.filtered_projects().len();
 
@@ -78,5 +76,9 @@ impl AppState {
         } else if self.selected_index >= len {
             self.selected_index = len - 1;
         }
+    }
+
+    pub fn selected_project(&self) -> Option<&Project> {
+        self.filtered_projects().get(self.selected_index).copied()
     }
 }

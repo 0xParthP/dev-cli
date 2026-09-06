@@ -1,14 +1,13 @@
-use std::path::PathBuf;
-
 use dev_cli::{models::project::Project, tui::state::AppState};
 
 fn project(name: &str) -> Project {
-    Project {
-        name: name.into(),
-        path: PathBuf::from(format!("/tmp/{name}")),
-        root: PathBuf::from("/tmp"),
-        git_dir: PathBuf::from(format!("/tmp/{name}/.git")),
-    }
+    let root = std::env::temp_dir();
+    let path = root.join(name);
+
+    // Ensure the fake project directory actually exists.
+    std::fs::create_dir_all(path.join(".git")).unwrap();
+
+    Project { name: name.into(), path: path.clone(), root, git_dir: path.join(".git") }
 }
 
 #[test]
