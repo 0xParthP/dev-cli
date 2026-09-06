@@ -1,20 +1,25 @@
-//! Header widget.
+//! Dashboard header.
 
 use ratatui::{
     Frame,
-    layout::Rect,
+    layout::{Alignment, Rect},
     style::{Modifier, Style},
-    widgets::{Block, Borders, Paragraph},
+    text::{Line, Span},
+    widgets::Paragraph,
 };
 
-use crate::tui::theme;
+use crate::tui::{state::AppState, theme};
 
-pub fn render(frame: &mut Frame, area: Rect) {
-    let text = "🚀 dev-cli\nModern Git Project Manager";
+pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
+    let title =
+        Span::styled("dev-cli", Style::default().fg(theme::PRIMARY).add_modifier(Modifier::BOLD));
 
-    let widget = Paragraph::new(text)
-        .block(Block::default().borders(Borders::ALL).title("Dashboard"))
-        .style(Style::default().fg(theme::PRIMARY).add_modifier(Modifier::BOLD));
+    let count = Span::styled(
+        format!("{} projects", state.filtered_projects().len()),
+        Style::default().fg(theme::MUTED),
+    );
 
-    frame.render_widget(widget, area);
+    let line = Line::from(vec![title, Span::raw(" "), count]);
+
+    frame.render_widget(Paragraph::new(line).alignment(Alignment::Left), area);
 }

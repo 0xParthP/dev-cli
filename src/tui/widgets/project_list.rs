@@ -1,14 +1,30 @@
-//! Placeholder project list.
+//! Project list widget.
 
 use ratatui::{
     Frame,
     layout::Rect,
-    widgets::{Block, Borders, Paragraph},
+    style::{Modifier, Style},
+    widgets::{Block, Borders, List, ListItem},
 };
 
-pub fn render(frame: &mut Frame, area: Rect) {
-    let widget = Paragraph::new("Projects will appear here in Phase 4.2.\n\nUse q or Esc to quit.")
-        .block(Block::default().borders(Borders::ALL).title("Projects"));
+use crate::tui::{state::AppState, theme};
+
+pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
+    let projects = state.filtered_projects();
+
+    let items: Vec<ListItem> = projects
+        .iter()
+        .enumerate()
+        .map(|(index, project)| {
+            let prefix = if index == state.selected_index { "▶ " } else { "  " };
+
+            ListItem::new(format!("{prefix}{}", project.name))
+        })
+        .collect();
+
+    let widget = List::new(items)
+        .block(Block::default().title(" Projects ").borders(Borders::ALL))
+        .highlight_style(Style::default().fg(theme::PRIMARY).add_modifier(Modifier::BOLD));
 
     frame.render_widget(widget, area);
 }

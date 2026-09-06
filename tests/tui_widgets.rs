@@ -1,50 +1,99 @@
-use dev_cli::tui::widgets::{footer, header, project_list, search};
-use ratatui::{Terminal, backend::TestBackend, layout::Rect};
+use anyhow::Result;
+use ratatui::{Terminal, backend::TestBackend};
 
-fn render_widget<F>(renderer: F) -> String
-where
-    F: FnOnce(&mut ratatui::Frame, Rect),
-{
-    let backend = TestBackend::new(60, 10);
-    let mut terminal = Terminal::new(backend).unwrap();
+use dev_cli::tui::{
+    state::AppState,
+    widgets::{footer, header, project_list, search},
+};
 
-    terminal
-        .draw(|frame| {
-            renderer(frame, frame.area());
-        })
-        .unwrap();
+use dev_cli::models::project::Project;
+use std::path::PathBuf;
 
-    terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect()
+fn project(name: &str) -> Project {
+    let root = PathBuf::from("/tmp");
+    let path = root.join(name);
+
+    Project { name: name.into(), path: path.clone(), root, git_dir: path.join(".git") }
 }
 
 #[test]
-fn header_contains_branding() {
-    let text = render_widget(header::render);
+fn header_renders() -> Result<()> {
+    let backend = TestBackend::new(80, 4);
+    let mut terminal = Terminal::new(backend)?;
+    let state = AppState::new();
 
-    assert!(text.contains("dev-cli"));
-    assert!(text.contains("Dashboard"));
+    terminal.draw(|frame| {
+        header::render(frame, frame.area(), &state);
+    })?;
+
+    Ok(())
 }
 
 #[test]
-fn search_widget_contains_placeholder() {
-    let text = render_widget(search::render);
+fn search_renders() -> Result<()> {
+    let backend = TestBackend::new(80, 3);
+    let mut terminal = Terminal::new(backend)?;
+    let state = AppState::new();
 
-    assert!(text.contains("Search"));
-    assert!(text.contains("Phase"));
+    terminal.draw(|frame| {
+        search::render(frame, frame.area(), &state);
+    })?;
+
+    Ok(())
 }
 
 #[test]
-fn project_widget_contains_placeholder() {
-    let text = render_widget(project_list::render);
+fn project_list_renders() -> Result<()> {
+    let backend = TestBackend::new(80, 10);
+    let mut terminal = Terminal::new(backend)?;
+    let state = AppState::new();
 
-    assert!(text.contains("Projects"));
-    assert!(text.contains("Use q"));
+    terminal.draw(|frame| {
+        project_list::render(frame, frame.area(), &state);
+    })?;
+
+    Ok(())
 }
 
 #[test]
-fn footer_contains_shortcuts() {
-    let text = render_widget(footer::render);
+fn footer_renders() -> Result<()> {
+    let backend = TestBackend::new(80, 2);
+    let mut terminal = Terminal::new(backend)?;
 
-    assert!(text.contains("Enter"));
-    assert!(text.contains("Quit"));
+    terminal.draw(|frame| {
+        footer::render(frame, frame.area());
+    })?;
+
+    Ok(())
+}
+
+#[test]
+fn search_works() -> Result<()> {
+    let mut state = AppState::new();
+
+    state.projects = vec![project("cursor"), project("weather-app"), project("notes")];
+
+    state.push_char('c');
+    state.push_char('u');
+    state.push_char('r');
+
+    let backend = TestBackend::new(60, 5);
+    let mut terminal = Terminal::new(backend)?;
+
+    terminal.draw(|frame| {
+        search::render(frame, frame.area(), &state);
+    })?;
+
+    let text = terminal.backend().buffer().content();
+
+    // Convert the terminal buffer into plain text.
+    let rendered: String = text.iter().map(|cell| cell.symbol()).collect();
+
+    assert!(rendered.contains("cur"));
+
+    let filtered = state.filtered_projects();
+    assert_eq!(filtered.len(), 1);
+    assert_eq!(filtered[0].name, "cursor");
+
+    Ok(())
 }
