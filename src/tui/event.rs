@@ -2,10 +2,9 @@
 
 use std::time::Duration;
 
+use super::{actions, state::AppState};
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
-
-use super::state::AppState;
 
 pub fn handle_events(state: &mut AppState) -> Result<()> {
     handle_events_with(state, event::poll, event::read)
@@ -29,6 +28,13 @@ where
 }
 
 pub fn handle_key(key: KeyEvent, state: &mut AppState) {
+    handle_key_with_launcher(key, state, actions::open_project)
+}
+
+pub fn handle_key_with_launcher<L>(key: KeyEvent, state: &mut AppState, launcher: L)
+where
+    L: Fn(&crate::models::project::Project) -> Result<()>,
+{
     match key.code {
         KeyCode::Char('q') | KeyCode::Esc => state.quit(),
 
@@ -43,6 +49,14 @@ pub fn handle_key(key: KeyEvent, state: &mut AppState) {
         KeyCode::Char(c) => {
             state.push_char(c);
             state.clamp_selection();
+        }
+
+        KeyCode::Enter => {
+            if let Some(project) = state.selected_project()
+                && launcher(project).is_ok()
+            {
+                state.quit();
+            }
         }
 
         _ => {}

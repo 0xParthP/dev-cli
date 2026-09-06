@@ -33,12 +33,12 @@ fn default_config_has_project_root() {
 #[test]
 fn config_round_trip_serialization() {
     let config =
-        Config { default_ide: Ide::Cursor, projects_root: vec![PathBuf::from("C:/Projects")] };
+        Config { default_ide: Ide::Vscode, projects_root: vec![PathBuf::from("C:/Projects")] };
 
     let toml = toml::to_string(&config).unwrap();
     let decoded: Config = toml::from_str(&toml).unwrap();
 
-    assert_eq!(decoded.default_ide, Ide::Cursor);
+    assert_eq!(decoded.default_ide, Ide::Vscode);
     assert_eq!(decoded.projects_root.len(), 1);
     assert_eq!(decoded.projects_root[0], PathBuf::from("C:/Projects"));
 }
@@ -46,7 +46,7 @@ fn config_round_trip_serialization() {
 #[test]
 fn config_multiple_roots_round_trip() {
     let config = Config {
-        default_ide: Ide::Cursor,
+        default_ide: Ide::Vscode,
         projects_root: vec![
             PathBuf::from("C:/Projects"),
             PathBuf::from("D:/Work"),

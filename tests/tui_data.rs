@@ -23,7 +23,7 @@ fn load_projects_discovers_git_repository() -> Result<()> {
         std::fs::create_dir_all(repo.join(".git"))?;
 
         let config =
-            Config { projects_root: vec![root.path().to_path_buf()], default_ide: Ide::Cursor };
+            Config { projects_root: vec![root.path().to_path_buf()], default_ide: Ide::Vscode };
 
         config.save()?;
 
@@ -43,7 +43,7 @@ fn load_projects_returns_empty_when_root_has_no_git_repos() -> Result<()> {
         let root = TempDir::new()?;
 
         let config =
-            Config { projects_root: vec![root.path().to_path_buf()], default_ide: Ide::Cursor };
+            Config { projects_root: vec![root.path().to_path_buf()], default_ide: Ide::Vscode };
 
         config.save()?;
 

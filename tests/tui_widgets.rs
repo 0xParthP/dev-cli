@@ -1,5 +1,5 @@
 use anyhow::Result;
-use ratatui::{Terminal, backend::TestBackend};
+use ratatui::{Terminal, backend::TestBackend, buffer::Buffer};
 
 use dev_cli::tui::{
     state::AppState,
@@ -7,13 +7,24 @@ use dev_cli::tui::{
 };
 
 use dev_cli::models::project::Project;
-use std::path::PathBuf;
 
 fn project(name: &str) -> Project {
-    let root = PathBuf::from("/tmp");
+    let root = std::env::temp_dir();
     let path = root.join(name);
 
+    // Ensure the fake project directory actually exists.
+    std::fs::create_dir_all(path.join(".git")).unwrap();
+
     Project { name: name.into(), path: path.clone(), root, git_dir: path.join(".git") }
+}
+
+fn render_widget(widget: impl FnOnce(&mut ratatui::Frame), width: u16, height: u16) -> Buffer {
+    let backend = TestBackend::new(width, height);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal.draw(|frame| widget(frame)).expect("failed to draw widget");
+
+    terminal.backend().buffer().clone()
 }
 
 #[test]
@@ -94,6 +105,33 @@ fn search_works() -> Result<()> {
     let filtered = state.filtered_projects();
     assert_eq!(filtered.len(), 1);
     assert_eq!(filtered[0].name, "cursor");
+
+    Ok(())
+}
+
+#[test]
+fn selected_project_is_highlighted() -> Result<()> {
+    let mut state = AppState::new();
+
+    state.projects = vec![project("alpha"), project("beta"), project("gamma")];
+
+    // Select "beta".
+    state.move_down();
+
+    let buffer = render_widget(
+        |frame| {
+            project_list::render(frame, ratatui::layout::Rect::new(0, 0, 40, 10), &state);
+        },
+        40,
+        10,
+    );
+
+    // Convert buffer into plain text.
+    let text: String = buffer.content().iter().map(|cell| cell.symbol()).collect();
+
+    assert!(text.contains("alpha"));
+    assert!(text.contains("beta"));
+    assert!(text.contains("gamma"));
 
     Ok(())
 }
