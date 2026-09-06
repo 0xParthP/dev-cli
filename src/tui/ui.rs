@@ -2,28 +2,29 @@
 
 use ratatui::{
     Frame,
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Layout},
     prelude::Stylize,
     widgets::Block,
 };
 
-use super::{state::AppState, theme, widgets};
+use crate::tui::widgets::{footer, header, project_list, search};
+
+use super::{state::AppState, theme};
 
 pub fn render(frame: &mut Frame, state: &AppState) {
+    // Background colour for the whole terminal.
     frame.render_widget(Block::default().bg(theme::BACKGROUND), frame.area());
 
-    let layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(4),
-            Constraint::Length(3),
-            Constraint::Min(5),
-            Constraint::Length(1),
-        ])
-        .split(frame.area());
+    let chunks = Layout::vertical([
+        Constraint::Length(2), // Header
+        Constraint::Length(3), // Search bar
+        Constraint::Min(1),    // Project list
+        Constraint::Length(1), // Footer
+    ])
+    .split(frame.area());
 
-    widgets::header::render(frame, layout[0], state);
-    widgets::search::render(frame, layout[1], state);
-    widgets::project_list::render(frame, layout[2], state);
-    widgets::footer::render(frame, layout[3]);
+    header::render(frame, chunks[0]);
+    search::render(frame, chunks[1], state);
+    project_list::render(frame, chunks[2], state);
+    footer::render(frame, chunks[3]);
 }

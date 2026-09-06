@@ -31,10 +31,9 @@ fn render_widget(widget: impl FnOnce(&mut ratatui::Frame), width: u16, height: u
 fn header_renders() -> Result<()> {
     let backend = TestBackend::new(80, 4);
     let mut terminal = Terminal::new(backend)?;
-    let state = AppState::new();
 
     terminal.draw(|frame| {
-        header::render(frame, frame.area(), &state);
+        header::render(frame, frame.area());
     })?;
 
     Ok(())
@@ -120,10 +119,10 @@ fn selected_project_is_highlighted() -> Result<()> {
 
     let buffer = render_widget(
         |frame| {
-            project_list::render(frame, ratatui::layout::Rect::new(0, 0, 40, 10), &state);
+            project_list::render(frame, ratatui::layout::Rect::new(0, 0, 40, 14), &state);
         },
         40,
-        10,
+        14,
     );
 
     // Convert buffer into plain text.
@@ -134,4 +133,70 @@ fn selected_project_is_highlighted() -> Result<()> {
     assert!(text.contains("gamma"));
 
     Ok(())
+}
+
+#[test]
+fn empty_search_state_renders_message() -> Result<()> {
+    let mut state = AppState::new();
+    state.projects = vec![project("cursor")];
+    state.search_query = "xyz".into();
+
+    let backend = TestBackend::new(60, 8);
+    let mut terminal = Terminal::new(backend)?;
+
+    terminal.draw(|frame| {
+        project_list::render(frame, frame.area(), &state);
+    })?;
+
+    let rendered: String =
+        terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+    assert!(rendered.contains("No projects found"));
+
+    Ok(())
+}
+
+#[test]
+fn search_placeholder_renders() -> Result<()> {
+    let state = AppState::new();
+
+    let backend = TestBackend::new(60, 3);
+    let mut terminal = Terminal::new(backend)?;
+
+    terminal.draw(|frame| {
+        search::render(frame, frame.area(), &state);
+    })?;
+
+    let rendered: String =
+        terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+    assert!(rendered.contains("Search projects..."));
+
+    Ok(())
+}
+
+#[test]
+fn footer_contains_enter_shortcut() -> Result<()> {
+    let backend = TestBackend::new(80, 2);
+    let mut terminal = Terminal::new(backend)?;
+
+    terminal.draw(|frame| {
+        footer::render(frame, frame.area());
+    })?;
+
+    let rendered: String =
+        terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+    assert!(rendered.contains("Enter"));
+    assert!(rendered.contains("Navigate"));
+
+    Ok(())
+}
+
+#[test]
+fn scroll_offset_keeps_selection_visible() {
+    let mut state = AppState::new();
+    state.selected_index = 15;
+
+    assert_eq!(state.scroll_offset(5), 11);
 }

@@ -8,18 +8,18 @@ use ratatui::{
     widgets::Paragraph,
 };
 
-use crate::tui::{state::AppState, theme};
+use crate::tui::theme;
 
-pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
-    let title =
-        Span::styled("dev-cli", Style::default().fg(theme::PRIMARY).add_modifier(Modifier::BOLD));
+pub fn render(frame: &mut Frame, area: Rect) {
+    let top = Line::from(vec![
+        Span::styled("🚀 ", Style::default().fg(theme::PRIMARY)),
+        Span::styled("dev-cli", Style::default().fg(theme::PRIMARY).add_modifier(Modifier::BOLD)),
+    ]);
 
-    let count = Span::styled(
-        format!("{} projects", state.filtered_projects().len()),
-        Style::default().fg(theme::MUTED),
-    );
+    let bottom =
+        Line::from(Span::styled("Fast project launcher", Style::default().fg(theme::MUTED)));
 
-    let line = Line::from(vec![title, Span::raw(" "), count]);
+    let header = Paragraph::new(vec![top, bottom]).alignment(Alignment::Left);
 
-    frame.render_widget(Paragraph::new(line).alignment(Alignment::Left), area);
+    frame.render_widget(header, area);
 }
