@@ -10,23 +10,21 @@ use ratatui::{
 use crate::tui::{state::AppState, theme};
 
 pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
-    let items: Vec<ListItem> = state
-        .filtered_projects()
+    let projects = state.filtered_projects();
+
+    let items: Vec<ListItem> = projects
         .iter()
         .enumerate()
         .map(|(index, project)| {
-            let style = if index == state.selected_index {
-                Style::default().fg(theme::PRIMARY).add_modifier(Modifier::BOLD)
-            } else {
-                Style::default()
-            };
+            let prefix = if index == state.selected_index { "▶ " } else { "  " };
 
-            ListItem::new(project.name.clone()).style(style)
+            ListItem::new(format!("{prefix}{}", project.name))
         })
         .collect();
 
-    frame.render_widget(
-        List::new(items).block(Block::default().title(" Projects ").borders(Borders::ALL)),
-        area,
-    );
+    let widget = List::new(items)
+        .block(Block::default().title(" Projects ").borders(Borders::ALL))
+        .highlight_style(Style::default().fg(theme::PRIMARY).add_modifier(Modifier::BOLD));
+
+    frame.render_widget(widget, area);
 }

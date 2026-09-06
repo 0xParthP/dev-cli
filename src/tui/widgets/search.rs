@@ -3,23 +3,22 @@
 use ratatui::{
     Frame,
     layout::Rect,
-    style::Style,
+    style::{Modifier, Style},
     widgets::{Block, Borders, Paragraph},
 };
 
 use crate::tui::{state::AppState, theme};
 
 pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
-    let placeholder =
-        if state.search_query.is_empty() { "Search projects..." } else { &state.search_query };
+    let text = if state.search_query.is_empty() {
+        "Search projects...".into()
+    } else {
+        state.search_query.clone()
+    };
 
-    frame.render_widget(
-        Paragraph::new(placeholder).block(
-            Block::default()
-                .title(" Search ")
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(theme::PRIMARY)),
-        ),
-        area,
-    );
+    let widget = Paragraph::new(text)
+        .block(Block::default().title(" Search ").borders(Borders::ALL))
+        .style(Style::default().fg(theme::PRIMARY).add_modifier(Modifier::BOLD));
+
+    frame.render_widget(widget, area);
 }

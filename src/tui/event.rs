@@ -3,16 +3,14 @@
 use std::time::Duration;
 
 use anyhow::Result;
-use crossterm::event::{self, Event, KeyCode, KeyEvent};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 
 use super::state::AppState;
 
-/// Production event handler.
 pub fn handle_events(state: &mut AppState) -> Result<()> {
     handle_events_with(state, event::poll, event::read)
 }
 
-/// Generic event handler used by tests.
 pub fn handle_events_with<P, R>(state: &mut AppState, poll: P, read: R) -> Result<()>
 where
     P: Fn(Duration) -> Result<bool, std::io::Error>,
@@ -21,16 +19,32 @@ where
     if poll(Duration::from_millis(50))?
         && let Event::Key(key) = read()?
     {
-        handle_key(key, state);
+        // Only react to actual key presses.
+        if key.kind == KeyEventKind::Press {
+            handle_key(key, state);
+        }
     }
 
     Ok(())
 }
 
-/// Handle a single keypress.
 pub fn handle_key(key: KeyEvent, state: &mut AppState) {
     match key.code {
         KeyCode::Char('q') | KeyCode::Esc => state.quit(),
+
+        KeyCode::Down => state.move_down(),
+        KeyCode::Up => state.move_up(),
+
+        KeyCode::Backspace => {
+            state.pop_char();
+            state.clamp_selection();
+        }
+
+        KeyCode::Char(c) => {
+            state.push_char(c);
+            state.clamp_selection();
+        }
+
         _ => {}
     }
 }

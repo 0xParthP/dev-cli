@@ -1,140 +1,172 @@
-use dev_cli::{models::project::Project, tui::state::AppState};
 use std::path::PathBuf;
 
-fn project(name: &str) -> Project {
-    let root = PathBuf::from(format!("/projects/{name}"));
+use dev_cli::{models::project::Project, tui::state::AppState};
 
+fn project(name: &str) -> Project {
     Project {
         name: name.into(),
-        path: root.clone(),
-        root: root.clone(),
-        git_dir: root.join(".git"),
+        path: PathBuf::from(format!("/tmp/{name}")),
+        root: PathBuf::from("/tmp"),
+        git_dir: PathBuf::from(format!("/tmp/{name}/.git")),
     }
 }
 
 #[test]
-fn app_state_starts_running() {
-    let state = AppState::new();
-
-    assert!(!state.should_quit);
-}
-
-#[test]
-fn quit_sets_flag() {
-    let mut state = AppState::new();
-
-    state.quit();
-
-    assert!(state.should_quit);
-}
-
-#[test]
-fn quit_is_idempotent() {
-    let mut state = AppState::new();
-
-    state.quit();
-    state.quit();
-
-    assert!(state.should_quit);
-}
-
-#[test]
-fn empty_state_has_no_projects() {
+fn app_state_starts_empty() {
     let state = AppState::new();
 
     assert!(state.projects.is_empty());
     assert!(state.search_query.is_empty());
     assert_eq!(state.selected_index, 0);
+    assert!(!state.should_quit);
 }
 
 #[test]
-fn set_projects_replaces_project_list() {
+fn quit_sets_should_quit() {
     let mut state = AppState::new();
 
-    state.set_projects(vec![project("dev-cli"), project("portfolio")]);
+    state.quit();
 
-    assert_eq!(state.projects.len(), 2);
-    assert_eq!(state.selected_index, 0);
+    assert!(state.should_quit);
 }
 
 #[test]
-fn push_char_updates_search_query() {
+fn filtered_projects_returns_all_when_query_empty() {
     let mut state = AppState::new();
 
-    state.push_char('d');
-    state.push_char('e');
-    state.push_char('v');
-
-    assert_eq!(state.search_query, "dev");
-}
-
-#[test]
-fn backspace_removes_last_character() {
-    let mut state = AppState::new();
-
-    state.push_char('d');
-    state.push_char('e');
-    state.push_char('v');
-
-    state.backspace();
-
-    assert_eq!(state.search_query, "de");
-}
-
-#[test]
-fn filtering_is_case_insensitive() {
-    let mut state = AppState::new();
-
-    state.set_projects(vec![project("Dev-CLI"), project("Portfolio"), project("Backend")]);
-
-    state.search_query = "dev".into();
+    state.projects = vec![project("cursor"), project("weather"), project("notes")];
 
     let filtered = state.filtered_projects();
 
-    assert_eq!(filtered.len(), 1);
-    assert_eq!(filtered[0].name, "Dev-CLI");
+    assert_eq!(filtered.len(), 3);
 }
 
 #[test]
-fn filtering_returns_all_when_query_empty() {
+fn filtered_projects_filters_case_insensitively() {
     let mut state = AppState::new();
 
-    state.set_projects(vec![project("One"), project("Two")]);
+    state.projects = vec![project("Cursor"), project("cursor-theme"), project("weather")];
 
-    assert_eq!(state.filtered_projects().len(), 2);
+    state.search_query = "CURSOR".into();
+
+    let filtered = state.filtered_projects();
+
+    assert_eq!(filtered.len(), 2);
+    assert_eq!(filtered[0].name, "Cursor");
+    assert_eq!(filtered[1].name, "cursor-theme");
 }
 
 #[test]
-fn select_next_stops_at_end() {
+fn move_down_stops_at_last_project() {
     let mut state = AppState::new();
 
-    state.set_projects(vec![project("One"), project("Two")]);
+    state.projects = vec![project("a"), project("b")];
 
-    state.select_next();
-    state.select_next();
-    state.select_next();
+    state.move_down();
+    state.move_down();
+    state.move_down();
 
     assert_eq!(state.selected_index, 1);
 }
 
 #[test]
-fn select_previous_saturates_at_zero() {
+fn move_up_stops_at_zero() {
     let mut state = AppState::new();
 
-    state.set_projects(vec![project("One"), project("Two")]);
+    state.projects = vec![project("a"), project("b")];
+    state.selected_index = 1;
 
-    state.select_previous();
+    state.move_up();
+    state.move_up();
 
     assert_eq!(state.selected_index, 0);
 }
 
 #[test]
-fn selected_project_returns_current_selection() {
+fn push_char_appends_to_search_and_resets_selection() {
     let mut state = AppState::new();
 
-    state.set_projects(vec![project("One"), project("Two")]);
+    state.selected_index = 5;
 
-    state.select_next();
+    state.push_char('c');
+    state.push_char('u');
 
-    assert_eq!(state.selected_project().unwrap().name, "Two");
+    assert_eq!(state.search_query, "cu");
+    assert_eq!(state.selected_index, 0);
+}
+
+#[test]
+fn pop_char_removes_last_character() {
+    let mut state = AppState::new();
+
+    state.search_query = "cursor".into();
+
+    state.pop_char();
+    state.pop_char();
+
+    assert_eq!(state.search_query, "curs");
+}
+
+#[test]
+fn clamp_selection_resets_when_filtered_list_is_empty() {
+    let mut state = AppState::new();
+
+    state.projects = vec![project("cursor")];
+    state.search_query = "weather".into();
+    state.selected_index = 5;
+
+    state.clamp_selection();
+
+    assert_eq!(state.selected_index, 0);
+}
+
+#[test]
+fn clamp_selection_moves_selection_to_last_item() {
+    let mut state = AppState::new();
+
+    state.projects = vec![project("cursor"), project("weather"), project("notes")];
+
+    state.selected_index = 10;
+
+    state.clamp_selection();
+
+    assert_eq!(state.selected_index, 2);
+}
+
+#[test]
+fn search_filters_projects() {
+    let mut state = AppState::new();
+
+    state.projects = vec![project("cursor"), project("weather-app"), project("cursor-theme")];
+
+    state.search_query = "cursor".into();
+
+    let filtered = state.filtered_projects();
+
+    assert_eq!(filtered.len(), 2);
+}
+
+#[test]
+fn move_down_stops_at_end() {
+    let mut state = AppState::new();
+
+    state.projects = vec![project("a"), project("b")];
+
+    state.move_down();
+    state.move_down();
+    state.move_down();
+
+    assert_eq!(state.selected_index, 1);
+}
+
+#[test]
+fn typing_resets_selection() {
+    let mut state = AppState::new();
+
+    state.selected_index = 4;
+
+    state.push_char('a');
+
+    assert_eq!(state.selected_index, 0);
+    assert_eq!(state.search_query, "a");
 }

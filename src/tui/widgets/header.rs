@@ -15,7 +15,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
         Span::styled("dev-cli", Style::default().fg(theme::PRIMARY).add_modifier(Modifier::BOLD));
 
     let count = Span::styled(
-        format!("{} projects", state.projects.len()),
+        format!("{} projects", state.filtered_projects().len()),
         Style::default().fg(theme::MUTED),
     );
 
