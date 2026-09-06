@@ -2,8 +2,8 @@ use anyhow::Result;
 use ratatui::{Terminal, backend::TestBackend, buffer::Buffer};
 
 use dev_cli::tui::{
-    state::AppState,
-    widgets::{footer, header, project_list, search},
+    state::{AppState, Tab},
+    widgets::{footer, header, project_list, search, tabs},
 };
 
 use dev_cli::models::project::Project;
@@ -199,4 +199,105 @@ fn scroll_offset_keeps_selection_visible() {
     state.selected_index = 15;
 
     assert_eq!(state.scroll_offset(5), 11);
+}
+
+#[test]
+fn header_is_centered_and_contains_title() -> Result<()> {
+    let backend = TestBackend::new(60, 2);
+    let mut terminal = Terminal::new(backend)?;
+
+    terminal.draw(|frame| {
+        header::render(frame, frame.area());
+    })?;
+
+    let rendered: String =
+        terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+    assert!(rendered.contains("dev-cli"));
+    assert!(rendered.contains("🚀"));
+
+    Ok(())
+}
+
+#[test]
+fn tabs_render_projects_tab_selected() -> Result<()> {
+    let backend = TestBackend::new(80, 2);
+    let mut terminal = Terminal::new(backend)?;
+
+    let state = AppState::new();
+
+    terminal.draw(|frame| {
+        tabs::render(frame, frame.area(), &state);
+    })?;
+
+    let rendered: String =
+        terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+    assert!(rendered.contains("Projects"));
+    assert!(rendered.contains("Recent"));
+    assert!(rendered.contains("IDE"));
+    assert!(rendered.contains("Settings"));
+
+    Ok(())
+}
+
+#[test]
+fn tabs_render_settings_tab_selected() -> Result<()> {
+    let backend = TestBackend::new(80, 2);
+    let mut terminal = Terminal::new(backend)?;
+
+    let mut state = AppState::new();
+    state.active_tab = Tab::Settings;
+
+    terminal.draw(|frame| {
+        tabs::render(frame, frame.area(), &state);
+    })?;
+
+    let rendered: String =
+        terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+    assert!(rendered.contains("Settings"));
+
+    Ok(())
+}
+
+#[test]
+fn footer_contains_all_shortcuts() -> Result<()> {
+    let backend = TestBackend::new(80, 2);
+    let mut terminal = Terminal::new(backend)?;
+
+    terminal.draw(|frame| {
+        footer::render(frame, frame.area());
+    })?;
+
+    let rendered: String =
+        terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+    assert!(rendered.contains("Enter"));
+    assert!(rendered.contains("Navigate"));
+    assert!(rendered.contains("Search"));
+    assert!(rendered.contains("Quit"));
+
+    Ok(())
+}
+
+#[test]
+fn non_projects_tab_shows_placeholder() -> Result<()> {
+    let backend = TestBackend::new(60, 12);
+    let mut terminal = Terminal::new(backend)?;
+
+    let mut state = AppState::new();
+    state.active_tab = Tab::Recent;
+
+    terminal.draw(|frame| {
+        project_list::render(frame, frame.area(), &state);
+    })?;
+
+    let rendered: String =
+        terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+    assert!(rendered.contains("Coming Soon"));
+    assert!(rendered.contains("Milestone"));
+
+    Ok(())
 }

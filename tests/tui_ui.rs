@@ -55,3 +55,23 @@ fn dashboard_renders_on_small_terminal() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn dashboard_renders_tabs() -> Result<()> {
+    let backend = TestBackend::new(80, 20);
+    let mut terminal = Terminal::new(backend)?;
+
+    let state = AppState::new();
+
+    terminal.draw(|frame| ui::render(frame, &state))?;
+
+    let rendered: String =
+        terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+    assert!(rendered.contains("Projects"));
+    assert!(rendered.contains("Recent"));
+    assert!(rendered.contains("IDE"));
+    assert!(rendered.contains("Settings"));
+
+    Ok(())
+}

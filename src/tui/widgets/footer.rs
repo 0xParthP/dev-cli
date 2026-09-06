@@ -2,7 +2,7 @@
 
 use ratatui::{
     Frame,
-    layout::Rect,
+    layout::{Alignment, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::Paragraph,
@@ -11,18 +11,20 @@ use ratatui::{
 use crate::tui::theme;
 
 pub fn render(frame: &mut Frame, area: Rect) {
-    let footer = Line::from(vec![
-        Span::styled("⏎ Enter", Style::default().fg(theme::SUCCESS).add_modifier(Modifier::BOLD)),
-        Span::styled(" Open   ", Style::default().fg(theme::TEXT)),
-        Span::styled("↑↓", Style::default().fg(theme::PRIMARY).add_modifier(Modifier::BOLD)),
-        Span::styled(" Navigate   ", Style::default().fg(theme::TEXT)),
-        Span::styled("/", Style::default().fg(theme::WARNING).add_modifier(Modifier::BOLD)),
-        Span::styled(" Search   ", Style::default().fg(theme::TEXT)),
-        Span::styled("Q", Style::default().fg(theme::DANGER).add_modifier(Modifier::BOLD)),
-        Span::styled(" Quit", Style::default().fg(theme::TEXT)),
+    let line = Line::from(vec![
+        Span::styled("↵ Enter", Style::default().fg(theme::SUCCESS)),
+        Span::raw("  "),
+        Span::styled("↑↓ Navigate", Style::default().fg(theme::PRIMARY)),
+        Span::raw("  "),
+        Span::styled("/ Search", Style::default().fg(theme::WARNING)),
+        Span::raw("  "),
+        Span::styled("Q Quit", Style::default().fg(theme::DANGER)),
     ]);
 
-    let widget = Paragraph::new(footer).style(Style::default().bg(theme::SURFACE));
-
-    frame.render_widget(widget, area);
+    frame.render_widget(
+        Paragraph::new(line)
+            .alignment(Alignment::Center)
+            .style(Style::default().add_modifier(Modifier::BOLD)),
+        area,
+    );
 }

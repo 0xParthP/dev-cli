@@ -5,9 +5,6 @@ use ratatui::style::Color;
 /// Main application background.
 pub const BACKGROUND: Color = Color::Rgb(12, 18, 28);
 
-/// Surface colour for inputs/status bars.
-pub const SURFACE: Color = Color::Rgb(24, 32, 48);
-
 /// Primary accent colour.
 pub const PRIMARY: Color = Color::Rgb(0, 190, 255);
 

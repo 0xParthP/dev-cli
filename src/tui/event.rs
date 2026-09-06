@@ -3,6 +3,7 @@
 use std::time::Duration;
 
 use super::{actions, state::AppState};
+use crate::tui::state::Tab;
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 
@@ -57,6 +58,24 @@ where
             {
                 state.quit();
             }
+        }
+
+        KeyCode::Left => {
+            state.active_tab = match state.active_tab {
+                Tab::Projects => Tab::Projects,
+                Tab::Recent => Tab::Projects,
+                Tab::Ide => Tab::Recent,
+                Tab::Settings => Tab::Ide,
+            };
+        }
+
+        KeyCode::Right => {
+            state.active_tab = match state.active_tab {
+                Tab::Projects => Tab::Recent,
+                Tab::Recent => Tab::Ide,
+                Tab::Ide => Tab::Settings,
+                Tab::Settings => Tab::Settings,
+            };
         }
 
         _ => {}

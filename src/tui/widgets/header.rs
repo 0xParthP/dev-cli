@@ -11,15 +11,10 @@ use ratatui::{
 use crate::tui::theme;
 
 pub fn render(frame: &mut Frame, area: Rect) {
-    let top = Line::from(vec![
-        Span::styled("🚀 ", Style::default().fg(theme::PRIMARY)),
+    let title = Line::from(vec![
+        Span::raw("🚀 "),
         Span::styled("dev-cli", Style::default().fg(theme::PRIMARY).add_modifier(Modifier::BOLD)),
     ]);
 
-    let bottom =
-        Line::from(Span::styled("Fast project launcher", Style::default().fg(theme::MUTED)));
-
-    let header = Paragraph::new(vec![top, bottom]).alignment(Alignment::Left);
-
-    frame.render_widget(header, area);
+    frame.render_widget(Paragraph::new(title).alignment(Alignment::Center), area);
 }
