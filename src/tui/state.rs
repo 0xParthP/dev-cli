@@ -2,6 +2,15 @@
 
 use crate::models::project::Project;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Tab {
+    #[default]
+    Projects,
+    Recent,
+    Ide,
+    Settings,
+}
+
 #[derive(Debug, Default)]
 pub struct AppState {
     /// All discovered projects.
@@ -15,6 +24,9 @@ pub struct AppState {
 
     /// Whether the dashboard should exit.
     pub should_quit: bool,
+
+    /// Currently active tab.
+    pub active_tab: Tab,
 }
 
 impl AppState {
