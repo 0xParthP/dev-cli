@@ -14,7 +14,7 @@
 //!
 //! ```toml
 //! projects_root = ["C:\\Users\\user\\Projects", "C:\\Users\\user\\Work"]
-//! default_ide = "cursor"
+//! default_ide = "vscode"
 //! ```
 
 use std::{fs, path::PathBuf};

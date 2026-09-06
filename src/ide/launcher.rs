@@ -47,7 +47,7 @@ use crate::{ide::detect::detect_ides, models::ide::Ide};
 /// use dev_cli::models::ide::Ide;
 /// use std::path::Path;
 ///
-/// launcher::launch(Ide::Cursor, Path::new("./my-project"))?;
+/// launcher::launch(Ide::Vscode, Path::new("./my-project"))?;
 /// # Ok(())
 /// # }
 /// ```

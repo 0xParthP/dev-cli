@@ -194,3 +194,25 @@ fn open_project_calls_launcher() -> Result<()> {
         Ok(())
     })
 }
+
+#[test]
+fn ignores_mouse_events() -> Result<()> {
+    let mut state = AppState::new();
+
+    handle_events_with(
+        &mut state,
+        |_| Ok(true),
+        || {
+            Ok(Event::Mouse(crossterm::event::MouseEvent {
+                kind: crossterm::event::MouseEventKind::Down(crossterm::event::MouseButton::Left),
+                column: 10,
+                row: 5,
+                modifiers: KeyModifiers::NONE,
+            }))
+        },
+    )?;
+
+    assert!(!state.should_quit);
+
+    Ok(())
+}

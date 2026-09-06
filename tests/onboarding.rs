@@ -101,7 +101,7 @@ fn ensure_onboarded_does_not_overwrite_existing_config() {
 
     // Pre-create a config with distinctive values.
     let original = Config {
-        default_ide: Ide::Cursor,
+        default_ide: Ide::Vscode,
         projects_root: vec![PathBuf::from("C:/OriginalProjects")],
     };
     original.save().expect("seed config");
@@ -118,7 +118,7 @@ fn ensure_onboarded_does_not_overwrite_existing_config() {
 
     // And the loaded values should still be our originals.
     let loaded = Config::load().unwrap();
-    assert_eq!(loaded.default_ide, Ide::Cursor);
+    assert_eq!(loaded.default_ide, Ide::Vscode);
     assert_eq!(loaded.projects_root, vec![PathBuf::from("C:/OriginalProjects")]);
 
     reset_config_dir_env();
