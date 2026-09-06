@@ -28,6 +28,13 @@ where
 }
 
 pub fn handle_key(key: KeyEvent, state: &mut AppState) {
+    handle_key_with_launcher(key, state, actions::open_project)
+}
+
+pub fn handle_key_with_launcher<L>(key: KeyEvent, state: &mut AppState, launcher: L)
+where
+    L: Fn(&crate::models::project::Project) -> Result<()>,
+{
     match key.code {
         KeyCode::Char('q') | KeyCode::Esc => state.quit(),
 
@@ -46,7 +53,7 @@ pub fn handle_key(key: KeyEvent, state: &mut AppState) {
 
         KeyCode::Enter => {
             if let Some(project) = state.selected_project()
-                && actions::open_project(project).is_ok()
+                && launcher(project).is_ok()
             {
                 state.quit();
             }

@@ -6,7 +6,7 @@ use dev_cli::{
     models::{ide::Ide, project::Project},
     tui::{
         actions,
-        event::{handle_events_with, handle_key},
+        event::{handle_events_with, handle_key, handle_key_with_launcher},
         state::AppState,
     },
 };
@@ -211,6 +211,59 @@ fn ignores_mouse_events() -> Result<()> {
             }))
         },
     )?;
+
+    assert!(!state.should_quit);
+
+    Ok(())
+}
+
+#[test]
+fn open_project_returns_launcher_error() -> Result<()> {
+    let project = project("demo");
+
+    let result = dev_cli::tui::actions::open_project_with(&project, |_ide, _path| {
+        Err(anyhow::anyhow!("launch failed"))
+    });
+
+    assert!(result.is_err());
+
+    Ok(())
+}
+
+#[test]
+fn enter_does_nothing_when_filtered_list_is_empty() {
+    let mut state = AppState::new();
+
+    state.projects = vec![project("cursor")];
+    state.search_query = "weather".into(); // filters everything out
+
+    handle_key_with_launcher(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE), &mut state, |_| {
+        panic!("launcher should not be called");
+    });
+
+    assert!(!state.should_quit);
+}
+
+#[test]
+fn enter_does_not_quit_when_open_project_fails() {
+    let mut state = AppState::new();
+
+    state.projects = vec![project("demo")];
+
+    handle_key_with_launcher(
+        KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
+        &mut state,
+        |_project| Err(anyhow::anyhow!("launch failed")),
+    );
+
+    assert!(!state.should_quit);
+}
+
+#[test]
+fn poll_false_does_not_read_event() -> Result<()> {
+    let mut state = AppState::new();
+
+    handle_events_with(&mut state, |_| Ok(false), || panic!("read should not be called"))?;
 
     assert!(!state.should_quit);
 
