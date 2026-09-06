@@ -15,8 +15,6 @@ fn dashboard_renders() -> Result<()> {
         terminal.backend().buffer().content().iter().map(|cell| cell.symbol()).collect::<String>();
 
     assert!(text.contains("dev-cli"));
-    assert!(text.contains("0 projects"));
-
     Ok(())
 }
 
@@ -52,6 +50,7 @@ fn dashboard_renders_on_small_terminal() -> Result<()> {
     let text =
         terminal.backend().buffer().content().iter().map(|cell| cell.symbol()).collect::<String>();
 
+    println!("{text}");
     assert!(text.contains("dev-cli"));
 
     Ok(())

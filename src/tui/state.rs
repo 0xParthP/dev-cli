@@ -81,4 +81,12 @@ impl AppState {
     pub fn selected_project(&self) -> Option<&Project> {
         self.filtered_projects().get(self.selected_index).copied()
     }
+
+    pub fn scroll_offset(&self, visible_rows: usize) -> usize {
+        if visible_rows == 0 {
+            return 0;
+        }
+
+        self.selected_index.saturating_sub(visible_rows.saturating_sub(1))
+    }
 }
