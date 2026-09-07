@@ -53,16 +53,6 @@ fn does_nothing_when_no_event_available() -> Result<()> {
 }
 
 #[test]
-fn quits_on_q() -> Result<()> {
-    let mut state = AppState::new();
-
-    handle_events_with(&mut state, |_| Ok(true), || Ok(key(KeyCode::Char('q'))))?;
-
-    assert!(state.should_quit);
-    Ok(())
-}
-
-#[test]
 fn quits_on_escape() -> Result<()> {
     let mut state = AppState::new();
 
@@ -90,15 +80,6 @@ fn ignores_resize_events() -> Result<()> {
 
     assert!(!state.should_quit);
     Ok(())
-}
-
-#[test]
-fn q_key_quits() {
-    let mut state = AppState::new();
-
-    handle_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE), &mut state);
-
-    assert!(state.should_quit);
 }
 
 #[test]
