@@ -18,7 +18,7 @@ pub fn render(frame: &mut Frame, area: Rect) {
         Span::raw("  "),
         Span::styled("/ Search", Style::default().fg(theme::WARNING)),
         Span::raw("  "),
-        Span::styled("Q Quit", Style::default().fg(theme::DANGER)),
+        Span::styled("Esc Quit", Style::default().fg(theme::DANGER)),
     ]);
 
     frame.render_widget(

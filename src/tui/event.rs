@@ -37,7 +37,7 @@ where
     L: Fn(&crate::models::project::Project) -> Result<()>,
 {
     match key.code {
-        KeyCode::Char('q') | KeyCode::Esc => state.quit(),
+        KeyCode::Esc => state.quit(),
 
         KeyCode::Down => state.move_down(),
         KeyCode::Up => state.move_up(),
