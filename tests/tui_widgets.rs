@@ -1,9 +1,12 @@
 use anyhow::Result;
 use ratatui::{Terminal, backend::TestBackend, buffer::Buffer};
 
-use dev_cli::tui::{
-    state::{AppState, Tab},
-    widgets::{footer, header, project_list, search, tabs},
+use dev_cli::{
+    models::ide::Ide,
+    tui::{
+        state::{AppState, Tab},
+        widgets::{footer, header, project_list, search, tabs},
+    },
 };
 
 use dev_cli::models::project::Project;
@@ -418,33 +421,36 @@ fn recent_tab_is_selected() -> Result<()> {
 
 #[test]
 #[serial]
-fn recent_tab_renders_recent_widget() -> Result<()> {
-    with_temp_config(|| -> Result<()> {
-        let mut config = Config::default();
+fn recent_tab_renders_recent_widget() {
+    with_temp_config(|| {
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
-        config.recent_projects.push(RecentProject {
-            name: "weather-app".into(),
-            path: PathBuf::from("/projects/weather-app"),
-            last_opened: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
-        });
-
-        config.save()?;
+        Config {
+            projects_root: vec![],
+            default_ide: Ide::Vscode,
+            recent_projects: vec![RecentProject {
+                name: "weather-app".into(),
+                path: PathBuf::from("/projects/weather-app"),
+                last_opened: now,
+            }],
+        }
+        .save()
+        .unwrap();
 
         let mut state = AppState::new();
         state.active_tab = Tab::Recent;
 
-        let backend = TestBackend::new(60, 10);
-        let mut terminal = Terminal::new(backend)?;
+        let buffer = render_widget(
+            |frame| {
+                project_list::render(frame, ratatui::layout::Rect::new(0, 0, 60, 12), &state);
+            },
+            60,
+            12,
+        );
 
-        terminal.draw(|frame| {
-            project_list::render(frame, frame.area(), &state);
-        })?;
-
-        let rendered: String =
-            terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+        let rendered: String = buffer.content().iter().map(|c| c.symbol()).collect();
 
         assert!(rendered.contains("weather-app"));
-
-        Ok(())
-    })
+        assert!(rendered.contains("Opened"));
+    });
 }
