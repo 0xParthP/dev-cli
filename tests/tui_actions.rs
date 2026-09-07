@@ -28,7 +28,8 @@ fn project(name: &str) -> Project {
 #[test]
 fn open_project_uses_default_ide() -> Result<()> {
     with_temp_config(|| -> Result<()> {
-        Config { projects_root: vec![], default_ide: Ide::Vscode }.save()?;
+        Config { projects_root: vec![], default_ide: Ide::Vscode, recent_projects: Vec::new() }
+            .save()?;
 
         let project = project("demo");
 
@@ -49,7 +50,8 @@ fn open_project_uses_default_ide() -> Result<()> {
 #[test]
 fn open_project_propagates_launcher_error() -> Result<()> {
     with_temp_config(|| -> Result<()> {
-        Config { projects_root: vec![], default_ide: Ide::Vscode }.save()?;
+        Config { projects_root: vec![], default_ide: Ide::Vscode, recent_projects: Vec::new() }
+            .save()?;
 
         let project = project("demo");
 

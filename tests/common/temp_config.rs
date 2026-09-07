@@ -1,9 +1,31 @@
-#![allow(dead_code)]
-use std::path::PathBuf;
-
 use dev_cli::{config::Config, models::ide::Ide};
+use tempfile::TempDir;
 
-/// Returns a valid test configuration.
+#[allow(dead_code)]
 pub fn test_config() -> Config {
-    Config { projects_root: vec![PathBuf::from("C:/Projects")], default_ide: Ide::Vscode }
+    Config {
+        projects_root: vec![TempDir::new().unwrap().path().to_path_buf()],
+        default_ide: Ide::Vscode,
+        recent_projects: Vec::new(),
+    }
+}
+
+#[allow(dead_code)]
+pub fn with_temp_config<F, R>(f: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    let dir = TempDir::new().unwrap();
+
+    unsafe {
+        std::env::set_var("DEVCLI_CONFIG_DIR", dir.path());
+    }
+
+    let result = f();
+
+    unsafe {
+        std::env::remove_var("DEVCLI_CONFIG_DIR");
+    }
+
+    result
 }

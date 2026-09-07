@@ -76,6 +76,7 @@ pub fn run_onboarding() -> Result<()> {
         input("Where are your Git projects stored?").default_input(&default_projects).interact()?;
 
     let default_ide = select("Choose your default IDE")
+        .initial_value(Ide::Vscode)
         .item(Ide::Vscode, "VS Code", "Recommended")
         .item(Ide::Cursor, "Cursor", "")
         .item(Ide::Claude, "Claude Code", "")
@@ -96,7 +97,7 @@ pub fn run_onboarding() -> Result<()> {
         roots.push(PathBuf::from(next_root));
     }
 
-    Config { projects_root: roots, default_ide }.save()?;
+    Config { projects_root: roots, default_ide, recent_projects: Vec::new() }.save()?;
 
     outro("✨ Setup complete! You're ready to use dev-cli.")?;
 

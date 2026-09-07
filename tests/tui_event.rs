@@ -156,7 +156,12 @@ fn enter_key_does_nothing_without_projects() {
 fn open_project_calls_launcher() -> Result<()> {
     with_temp_config(|| -> Result<()> {
         // Give the test its own isolated config.
-        Config { projects_root: vec![std::env::temp_dir()], default_ide: Ide::Vscode }.save()?;
+        Config {
+            projects_root: vec![std::env::temp_dir()],
+            default_ide: Ide::Vscode,
+            recent_projects: Vec::new(),
+        }
+        .save()?;
 
         let project = project("demo");
 
@@ -256,7 +261,7 @@ fn right_arrow_switches_tabs() {
     let mut state = AppState::new();
 
     handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE), &mut state);
-    assert_eq!(state.active_tab, Tab::Recent);
+    assert_eq!(state.active_tab, Tab::Projects);
 
     handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE), &mut state);
     assert_eq!(state.active_tab, Tab::Ide);
@@ -274,10 +279,10 @@ fn left_arrow_switches_tabs() {
     assert_eq!(state.active_tab, Tab::Ide);
 
     handle_key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE), &mut state);
-    assert_eq!(state.active_tab, Tab::Recent);
+    assert_eq!(state.active_tab, Tab::Projects);
 
     handle_key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE), &mut state);
-    assert_eq!(state.active_tab, Tab::Projects);
+    assert_eq!(state.active_tab, Tab::Recent);
 }
 
 #[test]
@@ -286,7 +291,7 @@ fn left_arrow_does_not_go_before_projects() {
 
     handle_key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE), &mut state);
 
-    assert_eq!(state.active_tab, Tab::Projects);
+    assert_eq!(state.active_tab, Tab::Recent);
 }
 
 #[test]

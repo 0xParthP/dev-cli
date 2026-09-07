@@ -5,8 +5,8 @@ use crate::models::project::Project;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Tab {
     #[default]
-    Projects,
     Recent,
+    Projects,
     Ide,
     Settings,
 }

@@ -15,15 +15,15 @@ use crate::tui::{
 
 pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
     let titles = [
-        Line::from(" Projects "),
         Line::from(" Recent "),
+        Line::from(" Projects "),
         Line::from(" IDE "),
         Line::from(" Settings "),
     ];
 
     let selected = match state.active_tab {
-        Tab::Projects => 0,
-        Tab::Recent => 1,
+        Tab::Recent => 0,
+        Tab::Projects => 1,
         Tab::Ide => 2,
         Tab::Settings => 3,
     };

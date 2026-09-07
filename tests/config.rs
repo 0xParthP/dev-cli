@@ -1,10 +1,16 @@
+use dev_cli::models::recent_project::RecentProject;
 use dev_cli::{config::Config, models::ide::Ide};
 use serial_test::serial;
-use std::path::PathBuf;
+use std::{
+    path::PathBuf,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 mod common;
 use crate::common::temp_project::TempProject;
+use anyhow::Result;
 use common::temp_config::test_config;
+use dev_cli::models::project::Project;
 
 /// Helper to point the config directory at an isolated temp dir
 fn isolate_config_dir() -> (tempfile::TempDir, std::path::PathBuf) {
@@ -23,6 +29,23 @@ fn reset_config_dir_env() {
     }
 }
 
+fn project(name: &str) -> Project {
+    let root = PathBuf::from("/projects");
+    let path = root.join(name);
+
+    Project { name: name.into(), path: path.clone(), root, git_dir: path.join(".git") }
+}
+
+fn with_temp_config<F, R>(f: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    let (_tmp, _dir) = isolate_config_dir();
+    let result = f();
+    reset_config_dir_env();
+    result
+}
+
 #[test]
 fn default_config_has_project_root() {
     let config = Config::default();
@@ -32,8 +55,11 @@ fn default_config_has_project_root() {
 
 #[test]
 fn config_round_trip_serialization() {
-    let config =
-        Config { default_ide: Ide::Vscode, projects_root: vec![PathBuf::from("C:/Projects")] };
+    let config = Config {
+        default_ide: Ide::Vscode,
+        projects_root: vec![PathBuf::from("C:/Projects")],
+        recent_projects: Vec::new(),
+    };
 
     let toml = toml::to_string(&config).unwrap();
     let decoded: Config = toml::from_str(&toml).unwrap();
@@ -52,6 +78,7 @@ fn config_multiple_roots_round_trip() {
             PathBuf::from("D:/Work"),
             PathBuf::from("/tmp/dev"),
         ],
+        recent_projects: Vec::new(),
     };
 
     let toml = toml::to_string(&config).unwrap();
@@ -152,4 +179,91 @@ fn corrupted_config_is_recreated_with_defaults() {
     unsafe {
         std::env::remove_var("DEVCLI_CONFIG_DIR");
     }
+}
+
+#[test]
+#[serial]
+fn add_recent_project_adds_project() -> Result<()> {
+    with_temp_config(|| -> Result<()> {
+        let mut config = Config::default();
+
+        let weather = project("weather-app");
+        config.add_recent_project(&weather);
+
+        assert_eq!(config.recent_projects.len(), 1);
+        assert_eq!(config.recent_projects[0].name, "weather-app");
+        assert_eq!(config.recent_projects[0].path, PathBuf::from("/projects/weather-app"));
+
+        Ok(())
+    })
+}
+
+#[test]
+#[serial]
+fn add_recent_project_moves_duplicate_to_front() -> Result<()> {
+    with_temp_config(|| -> Result<()> {
+        let mut config = Config::default();
+
+        let alpha = project("alpha");
+        let beta = project("beta");
+
+        config.add_recent_project(&alpha);
+        config.add_recent_project(&beta);
+        config.add_recent_project(&alpha);
+
+        assert_eq!(config.recent_projects.len(), 2);
+        assert_eq!(config.recent_projects[0].name, "alpha");
+        assert_eq!(config.recent_projects[1].name, "beta");
+
+        Ok(())
+    })
+}
+
+#[test]
+#[serial]
+fn add_recent_project_truncates_to_ten() -> Result<()> {
+    with_temp_config(|| -> Result<()> {
+        let mut config = Config::default();
+
+        for i in 0..12 {
+            let project = project(&format!("project-{i}"));
+            config.add_recent_project(&project);
+        }
+
+        assert_eq!(config.recent_projects.len(), 10);
+
+        assert_eq!(config.recent_projects[0].name, "project-11");
+        assert_eq!(config.recent_projects[9].name, "project-2");
+
+        Ok(())
+    })
+}
+
+#[test]
+#[serial]
+fn recent_projects_round_trip_serialization() -> Result<()> {
+    with_temp_config(|| -> Result<()> {
+        let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+
+        let config = Config {
+            projects_root: vec![PathBuf::from("/projects")],
+            default_ide: Ide::Cursor,
+            recent_projects: vec![RecentProject {
+                name: "weather-app".into(),
+                path: PathBuf::from("/projects/weather-app"),
+                last_opened: now,
+            }],
+        };
+
+        config.save()?;
+
+        let loaded = Config::load()?;
+
+        assert_eq!(loaded.recent_projects.len(), 1);
+        assert_eq!(loaded.recent_projects[0].name, "weather-app");
+        assert_eq!(loaded.recent_projects[0].path, PathBuf::from("/projects/weather-app"));
+        assert_eq!(loaded.recent_projects[0].last_opened, now);
+
+        Ok(())
+    })
 }

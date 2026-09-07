@@ -2,10 +2,12 @@
 
 use std::time::Duration;
 
-use super::{actions, state::AppState};
-use crate::tui::state::Tab;
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+
+use crate::{config::Config, models::project::Project, tui::state::Tab};
+
+use super::{actions, state::AppState};
 
 pub fn handle_events(state: &mut AppState) -> Result<()> {
     handle_events_with(state, event::poll, event::read)
@@ -34,7 +36,7 @@ pub fn handle_key(key: KeyEvent, state: &mut AppState) {
 
 pub fn handle_key_with_launcher<L>(key: KeyEvent, state: &mut AppState, launcher: L)
 where
-    L: Fn(&crate::models::project::Project) -> Result<()>,
+    L: Fn(&Project) -> Result<()>,
 {
     match key.code {
         KeyCode::Esc => state.quit(),
@@ -52,27 +54,41 @@ where
             state.clamp_selection();
         }
 
-        KeyCode::Enter => {
-            if let Some(project) = state.selected_project()
-                && launcher(project).is_ok()
-            {
-                state.quit();
+        KeyCode::Enter => match state.active_tab {
+            Tab::Projects => {
+                if let Some(project) = state.selected_project()
+                    && launcher(project).is_ok()
+                {
+                    state.quit();
+                }
             }
-        }
+
+            Tab::Recent => {
+                let config = Config::load().unwrap_or_default();
+
+                if let Some(project) = config.recent_projects.get(state.selected_index)
+                    && actions::open_path(&project.path).is_ok()
+                {
+                    state.quit();
+                }
+            }
+
+            _ => {}
+        },
 
         KeyCode::Left => {
             state.active_tab = match state.active_tab {
-                Tab::Projects => Tab::Projects,
-                Tab::Recent => Tab::Projects,
-                Tab::Ide => Tab::Recent,
+                Tab::Recent => Tab::Recent,
+                Tab::Projects => Tab::Recent,
+                Tab::Ide => Tab::Projects,
                 Tab::Settings => Tab::Ide,
             };
         }
 
         KeyCode::Right => {
             state.active_tab = match state.active_tab {
-                Tab::Projects => Tab::Recent,
-                Tab::Recent => Tab::Ide,
+                Tab::Recent => Tab::Projects,
+                Tab::Projects => Tab::Ide,
                 Tab::Ide => Tab::Settings,
                 Tab::Settings => Tab::Settings,
             };

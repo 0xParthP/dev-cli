@@ -11,27 +11,21 @@ fn isolated_temp_dir() -> TempDir {
     TempDir::new().expect("create temp dir")
 }
 
-/// Build a Command that points the platform config directory at the
-/// given isolated temp dir.
 fn isolated_cmd(dir: &TempDir) -> Command {
-    let dir_str = dir.path().to_string_lossy().into_owned();
-
     let mut cmd = Command::cargo_bin("dev").unwrap();
-    if cfg!(windows) {
-        cmd.env("APPDATA", &dir_str);
-        cmd.env("LOCALAPPDATA", &dir_str);
-    } else {
-        cmd.env("XDG_CONFIG_HOME", &dir_str);
-        cmd.env("HOME", &dir_str);
-    }
+
+    // Use the application's explicit test override.
+    cmd.env("DEVCLI_CONFIG_DIR", dir.path());
 
     cmd
 }
 
 #[test]
+#[serial]
 fn config_show_runs() {
-    Command::cargo_bin("dev")
-        .unwrap()
+    let tmp = isolated_temp_dir();
+
+    isolated_cmd(&tmp)
         .args(["config", "show"])
         .assert()
         .success()
@@ -39,9 +33,11 @@ fn config_show_runs() {
 }
 
 #[test]
+#[serial]
 fn config_init_runs() {
-    Command::cargo_bin("dev")
-        .unwrap()
+    let tmp = isolated_temp_dir();
+
+    isolated_cmd(&tmp)
         .args(["config", "init"])
         .assert()
         .success()
@@ -49,15 +45,12 @@ fn config_init_runs() {
 }
 
 #[test]
+#[serial]
 fn config_help_runs() {
-    Command::cargo_bin("dev")
-        .unwrap()
-        .args(["config", "--help"])
-        .assert()
-        .success()
-        .stdout(contains_usage());
-}
+    let tmp = isolated_temp_dir();
 
+    isolated_cmd(&tmp).args(["config", "--help"]).assert().success().stdout(contains_usage());
+}
 #[test]
 #[serial]
 fn config_set_default_ide_persists() {

@@ -33,6 +33,7 @@ cliclack = "0.5"
 console = "0.16"
 ratatui = "0.30.2"
 crossterm = "0.29"
+unicode-width = "0.2.2"
 
 [dev-dependencies]
 assert_cmd = "2"

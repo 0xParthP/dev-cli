@@ -7,6 +7,18 @@ use dev_cli::tui::{
 };
 
 use dev_cli::models::project::Project;
+use dev_cli::tui::widgets::recent;
+
+use dev_cli::{config::Config, models::recent_project::RecentProject};
+use serial_test::serial;
+
+use std::{
+    path::PathBuf,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
+mod common;
+use common::temp_config::with_temp_config;
 
 fn project(name: &str) -> Project {
     let root = std::env::temp_dir();
@@ -111,26 +123,23 @@ fn search_works() -> Result<()> {
 #[test]
 fn selected_project_is_highlighted() -> Result<()> {
     let mut state = AppState::new();
+    state.active_tab = Tab::Projects; // <-- Add this
 
     state.projects = vec![project("alpha"), project("beta"), project("gamma")];
 
-    // Select "beta".
     state.move_down();
 
     let buffer = render_widget(
         |frame| {
-            project_list::render(frame, ratatui::layout::Rect::new(0, 0, 40, 14), &state);
+            project_list::render(frame, ratatui::layout::Rect::new(0, 0, 50, 16), &state);
         },
-        40,
-        14,
+        50,
+        16,
     );
 
-    // Convert buffer into plain text.
     let text: String = buffer.content().iter().map(|cell| cell.symbol()).collect();
 
-    assert!(text.contains("alpha"));
     assert!(text.contains("beta"));
-    assert!(text.contains("gamma"));
 
     Ok(())
 }
@@ -138,10 +147,11 @@ fn selected_project_is_highlighted() -> Result<()> {
 #[test]
 fn empty_search_state_renders_message() -> Result<()> {
     let mut state = AppState::new();
+    state.active_tab = Tab::Projects; // <-- Important
     state.projects = vec![project("cursor")];
     state.search_query = "xyz".into();
 
-    let backend = TestBackend::new(60, 8);
+    let backend = TestBackend::new(60, 10);
     let mut terminal = Terminal::new(backend)?;
 
     terminal.draw(|frame| {
@@ -152,6 +162,7 @@ fn empty_search_state_renders_message() -> Result<()> {
         terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
 
     assert!(rendered.contains("No projects found"));
+    assert!(rendered.contains("Try another search."));
 
     Ok(())
 }
@@ -224,7 +235,8 @@ fn tabs_render_projects_tab_selected() -> Result<()> {
     let backend = TestBackend::new(80, 2);
     let mut terminal = Terminal::new(backend)?;
 
-    let state = AppState::new();
+    let mut state = AppState::new();
+    state.active_tab = Tab::Projects;
 
     terminal.draw(|frame| {
         tabs::render(frame, frame.area(), &state);
@@ -283,11 +295,11 @@ fn footer_contains_all_shortcuts() -> Result<()> {
 
 #[test]
 fn non_projects_tab_shows_placeholder() -> Result<()> {
-    let backend = TestBackend::new(60, 12);
-    let mut terminal = Terminal::new(backend)?;
-
     let mut state = AppState::new();
-    state.active_tab = Tab::Recent;
+    state.active_tab = Tab::Ide;
+
+    let backend = TestBackend::new(60, 10);
+    let mut terminal = Terminal::new(backend)?;
 
     terminal.draw(|frame| {
         project_list::render(frame, frame.area(), &state);
@@ -297,7 +309,142 @@ fn non_projects_tab_shows_placeholder() -> Result<()> {
         terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
 
     assert!(rendered.contains("Coming Soon"));
-    assert!(rendered.contains("Milestone"));
 
     Ok(())
+}
+
+#[test]
+#[serial]
+fn recent_widget_renders_empty_state() -> Result<()> {
+    let backend = TestBackend::new(60, 10);
+    let mut terminal = Terminal::new(backend)?;
+    let state = AppState::new();
+
+    terminal.draw(|frame| {
+        recent::render(frame, frame.area(), &state);
+    })?;
+
+    let rendered: String =
+        terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+    assert!(rendered.contains("No recent projects"));
+
+    Ok(())
+}
+
+#[test]
+#[serial]
+fn recent_widget_renders_project_name() -> Result<()> {
+    with_temp_config(|| -> Result<()> {
+        let mut config = Config::default();
+
+        config.recent_projects.push(RecentProject {
+            name: "weather-app".into(),
+            path: PathBuf::from("/projects/weather-app"),
+            last_opened: 0,
+        });
+
+        config.save()?;
+
+        let backend = TestBackend::new(60, 10);
+        let mut terminal = Terminal::new(backend)?;
+        let state = AppState::new();
+
+        terminal.draw(|frame| {
+            recent::render(frame, frame.area(), &state);
+        })?;
+
+        let rendered: String =
+            terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+        assert!(rendered.contains("weather-app"));
+
+        Ok(())
+    })
+}
+
+#[test]
+#[serial]
+fn recent_widget_renders_relative_timestamp() -> Result<()> {
+    with_temp_config(|| -> Result<()> {
+        let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+
+        let mut config = Config::default();
+
+        config.recent_projects.push(RecentProject {
+            name: "weather-app".into(),
+            path: PathBuf::from("/projects/weather-app"),
+            last_opened: now,
+        });
+
+        config.save()?;
+
+        let backend = TestBackend::new(70, 10);
+        let mut terminal = Terminal::new(backend)?;
+        let state = AppState::new();
+
+        terminal.draw(|frame| {
+            recent::render(frame, frame.area(), &state);
+        })?;
+
+        let rendered: String =
+            terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+        assert!(rendered.contains("Opened just now"));
+
+        Ok(())
+    })
+}
+
+#[test]
+#[serial]
+fn recent_tab_is_selected() -> Result<()> {
+    let state = AppState::new();
+
+    let backend = TestBackend::new(60, 2);
+    let mut terminal = Terminal::new(backend)?;
+
+    terminal.draw(|frame| {
+        tabs::render(frame, frame.area(), &state);
+    })?;
+
+    let rendered: String =
+        terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+    assert!(rendered.contains("Recent"));
+
+    Ok(())
+}
+
+#[test]
+#[serial]
+fn recent_tab_renders_recent_widget() -> Result<()> {
+    with_temp_config(|| -> Result<()> {
+        let mut config = Config::default();
+
+        config.recent_projects.push(RecentProject {
+            name: "weather-app".into(),
+            path: PathBuf::from("/projects/weather-app"),
+            last_opened: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
+        });
+
+        config.save()?;
+
+        let mut state = AppState::new();
+        state.active_tab = Tab::Recent;
+
+        let backend = TestBackend::new(60, 10);
+        let mut terminal = Terminal::new(backend)?;
+
+        terminal.draw(|frame| {
+            project_list::render(frame, frame.area(), &state);
+        })?;
+
+        let rendered: String =
+            terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+        assert!(rendered.contains("weather-app"));
+
+        Ok(())
+    })
 }

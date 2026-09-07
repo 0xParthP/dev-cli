@@ -38,29 +38,20 @@ fn create_fake_executable() -> std::path::PathBuf {
     path
 }
 
-/// Build a `dev` command that points the platform config directory at an
-/// isolated temp dir.
 fn dev_cmd_isolated() -> (Command, TempDir) {
     let tmp = TempDir::new().expect("create temp dir");
-    let dir_str = tmp.path().to_string_lossy().into_owned();
 
     let mut cmd = Command::cargo_bin("dev").unwrap();
-    if cfg!(windows) {
-        cmd.env("APPDATA", &dir_str);
-        cmd.env("LOCALAPPDATA", &dir_str);
-    } else {
-        cmd.env("XDG_CONFIG_HOME", &dir_str);
-        cmd.env("HOME", &dir_str);
-    }
+    cmd.env("DEVCLI_CONFIG_DIR", tmp.path());
 
     (cmd, tmp)
 }
 
 #[test]
 fn unknown_project_returns_error() {
-    Command::cargo_bin("dev")
-        .unwrap()
-        .args(["open", "DoesNotExist"])
+    let (mut cmd, _tmp) = dev_cmd_isolated();
+
+    cmd.args(["open", "DoesNotExist"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("Project"));
@@ -68,21 +59,16 @@ fn unknown_project_returns_error() {
 
 #[test]
 fn help_for_open_command_works() {
-    Command::cargo_bin("dev")
-        .unwrap()
-        .args(["open", "--help"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Usage"));
+    let (mut cmd, _tmp) = dev_cmd_isolated();
+
+    cmd.args(["open", "--help"]).assert().success().stdout(predicate::str::contains("Usage"));
 }
 
 #[test]
 fn open_with_specific_ide_parses() {
-    Command::cargo_bin("dev")
-        .unwrap()
-        .args(["open", "FakeProject", "--ide", "vscode"])
-        .assert()
-        .failure();
+    let (mut cmd, _tmp) = dev_cmd_isolated();
+
+    cmd.args(["open", "FakeProject", "--ide", "vscode"]).assert().failure();
 }
 
 #[test]

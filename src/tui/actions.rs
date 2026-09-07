@@ -1,14 +1,18 @@
 //! Actions performed from the TUI.
 
-use std::path::Path;
-
 use anyhow::Result;
+use std::path::Path;
 
 use crate::{
     config::Config,
     ide::launcher,
     models::{ide::Ide, project::Project},
 };
+
+pub fn open_path(path: &Path) -> anyhow::Result<()> {
+    let config = Config::load()?;
+    launcher::launch(config.default_ide, path)
+}
 
 /// Open a project using the real launcher.
 pub fn open_project(project: &Project) -> Result<()> {
@@ -20,6 +24,9 @@ pub fn open_project_with<F>(project: &Project, mut launch: F) -> Result<()>
 where
     F: FnMut(Ide, &Path) -> Result<()>,
 {
-    let config = Config::load()?;
-    launch(config.default_ide, &project.path)
+    let mut config = Config::load()?;
+    launch(config.default_ide, &project.path)?;
+    config.add_recent_project(project);
+    config.save()?;
+    Ok(())
 }
