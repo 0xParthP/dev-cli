@@ -52,7 +52,7 @@ fn list_projects() -> Result<()> {
 
 /// Open a project in an IDE.
 fn open(args: OpenArgs) -> Result<()> {
-    let config = Config::load()?;
+    let mut config = Config::load()?;
 
     let projects = scanner::discover_projects(&config.projects_root)?;
 
@@ -66,6 +66,9 @@ fn open(args: OpenArgs) -> Result<()> {
     let ide = args.ide.unwrap_or(config.default_ide);
 
     launcher::launch(ide, &project.path)?;
+
+    config.add_recent_project(&project);
+    config.save()?;
 
     println!("{} {}", "Opened".green(), project.path.display());
 
