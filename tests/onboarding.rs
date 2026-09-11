@@ -3,7 +3,6 @@ use dev_cli::config::Config;
 use dev_cli::models::ide::Ide;
 use dev_cli::onboarding::{default_projects_dir, ensure_onboarded};
 use serial_test::serial;
-use std::io::IsTerminal;
 use std::path::PathBuf;
 use temp_env::with_var;
 use tempfile::TempDir;
@@ -15,7 +14,9 @@ where
     F: FnOnce() -> R,
 {
     let dir = TempDir::new().unwrap();
-    with_var("DEVCLI_CONFIG_DIR", Some(dir.path()), f)
+    with_var("DEVCLI_CONFIG_DIR", Some(dir.path()), || {
+        with_var("DEVCLI_SKIP_ONBOARDING", Some("1"), f)
+    })
 }
 
 #[test]
@@ -58,12 +59,10 @@ fn ensure_onboarded_returns_ok_when_config_missing_but_no_terminal() {
 
         assert!(!Config::exists().unwrap());
 
-        if !std::io::stdin().is_terminal() || !std::io::stdout().is_terminal() {
-            assert!(ensure_onboarded().is_ok());
+        assert!(ensure_onboarded().is_ok());
 
-            // Wizard must not create a config when not attached to a TTY.
-            assert!(!Config::exists().unwrap(), "non-terminal run must not create config");
-        }
+        // Wizard must not create a config when not attached to a TTY or when skipped.
+        assert!(!Config::exists().unwrap(), "non-terminal/skipped run must not create config");
     });
 }
 

@@ -1,21 +1,4 @@
 //! Configuration file management.
-//!
-//! Handles loading, saving, and managing the `config.toml` file which stores
-//! user preferences like default IDE and project root directories.
-//!
-//! # File Format
-//!
-//! Configuration is stored in TOML format at platform-specific locations:
-//! - **Windows:** `C:\Users\{user}\AppData\Roaming\dev-cli\config\config.toml`
-//! - **macOS:** `~/Library/Application Support/dev-cli/config.toml`
-//! - **Linux:** `~/.config/dev-cli/config.toml`
-//!
-//! # Example Config
-//!
-//! ```toml
-//! projects_root = ["C:\\Users\\user\\Projects", "C:\\Users\\user\\Work"]
-//! default_ide = "vscode"
-//! ```
 
 use std::{fs, path::PathBuf};
 
@@ -27,9 +10,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::models::{ide::Ide, project::Project, recent_project::RecentProject};
 
 /// User configuration for dev-cli.
-///
-/// Stores persistent settings like project roots and default IDE.
-/// Automatically serializable to/from TOML format.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     /// Directories to search for Git repositories.
@@ -45,10 +25,6 @@ pub struct Config {
 
 impl Default for Config {
     /// Creates configuration with sensible defaults.
-    ///
-    /// Defaults:
-    /// - `projects_root` — `~/Projects` directory
-    /// - `default_ide` — VS Code
     fn default() -> Self {
         let home = BaseDirs::new()
             .map(|b| b.home_dir().to_path_buf())
@@ -64,13 +40,6 @@ impl Default for Config {
 
 impl Config {
     /// Get the path to the configuration file.
-    ///
-    /// Returns platform-specific path:
-    /// - **Windows:** `C:\Users\{user}\AppData\Roaming\dev-cli\config\config.toml`
-    /// - **macOS:** `~/Library/Application Support/dev-cli/config.toml`
-    /// - **Linux:** `~/.config/dev-cli/config.toml`
-    ///
-    /// Returns error if platform directories cannot be located.
     pub fn path() -> Result<PathBuf> {
         // Check for test override first.
         // `DEVCLI_CONFIG_DIR` lets integration tests point the config at a
@@ -86,14 +55,6 @@ impl Config {
     }
 
     /// Load configuration from file.
-    ///
-    /// If the configuration file doesn't exist, creates it with default values
-    /// and returns the defaults.
-    ///
-    /// Returns error if:
-    /// - Config directory cannot be located
-    /// - File cannot be read (except if missing)
-    /// - TOML parsing fails
     pub fn load() -> Result<Self> {
         let path = Self::path()?;
 
@@ -128,15 +89,6 @@ impl Config {
     }
 
     /// Save configuration to file.
-    ///
-    /// Creates config directory if it doesn't exist. Overwrites existing file.
-    ///
-    /// # Errors
-    ///
-    /// Returns error if:
-    /// - Config directory cannot be located or created
-    /// - File cannot be written
-    /// - Serialization to TOML fails
     pub fn save(&self) -> Result<()> {
         let path = Self::path()?;
 

@@ -37,27 +37,7 @@ use crate::{ide::detect::detect_ides, models::ide::Ide};
 /// - IDE is not installed/detected
 /// - Process cannot be spawned
 /// - Process spawn fails
-///
-/// # Example
-///
-/// ```no_run
-/// # use anyhow::Result;
-/// # fn example() -> Result<()> {
-/// use dev_cli::ide::launcher;
-/// use dev_cli::models::ide::Ide;
-/// use std::path::Path;
-///
-/// launcher::launch(Ide::Vscode, Path::new("./my-project"))?;
-/// # Ok(())
-/// # }
-/// ```
 pub fn launch(ide: Ide, project: &Path) -> Result<()> {
-    // Test override: bypass IDE detection entirely.
-    if let Ok(test_executable) = std::env::var("DEVCLI_TEST_EXECUTABLE") {
-        return launch_spawn(ide, project, Path::new(&test_executable));
-    }
-
-    // Normal application path.
     let installed = detect_ides();
 
     let launcher = installed.iter().find(|i| i.ide == ide);
@@ -70,11 +50,6 @@ pub fn launch(ide: Ide, project: &Path) -> Result<()> {
 }
 
 /// Helper used to spawn an IDE process with a specific executable path.
-///
-/// Exists to share the per-IDE CLI semantics (Claude uses `current_dir`,
-/// Terminal uses `-d`, others pass the project as a positional arg) between
-/// the test override path and the normal application path, so both are
-/// covered by the same test suite.
 #[doc(hidden)]
 pub fn launch_spawn(ide: Ide, project: &Path, executable: &Path) -> Result<()> {
     match ide {

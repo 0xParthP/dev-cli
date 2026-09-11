@@ -1,22 +1,8 @@
 //! CLI argument parsing using Clap derive macros.
-//!
-//! This module defines the command-line interface for dev-cli using Clap's
-//! derive API. All public structs and enums are used for parsing command-line
-//! arguments into structured data.
-//!
-//! # Structure
-//!
-//! - [`Cli`] — Top-level command struct
-//! - [`Commands`] — Available subcommands
-//! - Command-specific `Args` and `Subcommand` structs
-
-use clap::{Args, Parser, Subcommand};
 
 use crate::models::ide::Ide;
+use clap::{Args, Parser, Subcommand};
 
-/// Top-level CLI arguments.
-///
-/// Parsed from command line and contains a subcommand to dispatch to.
 #[derive(Parser)]
 #[command(name = "dev")]
 #[command(version)]
@@ -30,13 +16,6 @@ pub struct Cli {
 }
 
 /// Available subcommands for dev-cli.
-///
-/// Each variant corresponds to a major feature:
-/// - `Project` — List and open projects
-/// - `Config` — Manage configuration
-/// - `Ide` — List detected IDEs
-/// - `Install` — Install globally
-/// - `Open` — Shorthand for opening projects
 #[derive(Subcommand)]
 pub enum Commands {
     /// Project Management
@@ -53,8 +32,6 @@ pub enum Commands {
 }
 
 /// Arguments for opening a project.
-///
-/// Specifies which project to open and optionally which IDE to use.
 #[derive(Args)]
 pub struct OpenArgs {
     /// Name of the project to open.
@@ -66,9 +43,6 @@ pub struct OpenArgs {
 }
 
 /// Subcommands for `dev project`.
-///
-/// - `List` — List configured projects
-/// - `Open` — Open a specific project
 #[derive(Subcommand)]
 pub enum ProjectSubcommand {
     /// List all configured project root directories.
@@ -87,10 +61,6 @@ pub struct ProjectCommand {
 }
 
 /// Subcommands for `dev config`.
-///
-/// - `Init` — Initialize configuration file
-/// - `Show` — Display current configuration
-/// - `SetDefaultIde` — Set the default IDE
 #[derive(Subcommand)]
 pub enum ConfigSubcommand {
     /// Initialize configuration file with defaults.
@@ -123,8 +93,6 @@ pub struct IdeCommand {
 }
 
 /// Subcommands for `dev ide`.
-///
-/// - `List` — List detected IDEs
 #[derive(Subcommand)]
 pub enum IdeSubcommand {
     /// List all detected IDEs on the system.

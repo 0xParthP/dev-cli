@@ -1,23 +1,7 @@
 //! Project/repository type definitions.
-//!
-//! Defines the [`Project`] struct representing a discovered Git repository.
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-
-/// A Git repository discovered by dev-cli.
-///
-/// Represents a single project that can be opened in an IDE.
-/// Currently stores basic information; Sprint 2+ will add enhanced metadata.
-///
-/// # Fields
-///
-/// - `name` — Project directory name
-/// - `path` — Full path to project directory
-/// - `language` — Primary language (optional, future use)
-/// - `framework` — Used framework (optional, future use)
-/// - `branch` — Current Git branch (optional, future use)
-/// - `dirty` — Whether working directory has uncommitted changes (future use)
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Project {

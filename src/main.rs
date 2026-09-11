@@ -1,13 +1,4 @@
-//! Binary entrypoint for `dev-cli`.
-//!
-//! This binary is intentionally thin.
-//! All application logic lives in the `dev_cli` library crate.
-//!
-//! ## Responsibilities
-//!
-//! - Initialise logging.
-//! - Parse CLI arguments using `clap`.
-//! - Dispatch commands to the library crate.
+//! Main entrypoint for `dev-cli`.
 
 use anyhow::Result;
 use clap::Parser;

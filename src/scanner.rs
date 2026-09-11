@@ -1,22 +1,4 @@
 //! Repository discovery engine.
-//!
-//! This module recursively walks configured project roots looking for Git
-//! repositories and returns a collection of [`Project`] values.
-//!
-//! The scanner is intentionally filesystem-only. It does **not** inspect Git
-//! metadata such as branches or remotes—that happens in Sprint 3.
-//!
-//! # Example
-//!
-//! ```no_run
-//! use std::path::PathBuf;
-//! use dev_cli::scanner::discover_projects;
-//!
-//! let roots = vec![PathBuf::from("C:/Users/parth/Documents/projects")];
-//! let projects = discover_projects(&roots).unwrap();
-//!
-//! println!("Found {} repositories.", projects.len());
-//! ```
 
 use anyhow::Result;
 use ignore::WalkBuilder;
@@ -28,20 +10,10 @@ use std::{
 use crate::models::project::Project;
 
 /// Directory names that should never be scanned.
-///
-/// These are typically dependency directories or build outputs that may contain
-/// nested `.git` folders which are not real developer projects.
 const IGNORED_DIRS: &[&str] =
     &[".git", "target", "node_modules", ".venv", "venv", "build", "dist", ".idea", ".vscode"];
 
 /// Discover every Git repository beneath one or more configured project roots.
-///
-/// Duplicate repositories are removed using canonical filesystem paths, and the
-/// returned list is sorted alphabetically by project name.
-///
-/// # Errors
-///
-/// Returns an error only if a discovered repository cannot be canonicalised.
 pub fn discover_projects(roots: &[PathBuf]) -> Result<Vec<Project>> {
     let mut projects = Vec::new();
     let mut seen = HashSet::new();

@@ -68,6 +68,18 @@ fn vscode_not_added_twice() {
 }
 
 #[test]
+fn cursor_not_added_twice() {
+    let dir = TempDir::new().unwrap();
+    let home = dir.path();
+    create_windows_exe(home, "AppData/Local/Programs/Cursor/Cursor.exe");
+    let mut list = Vec::new();
+    // Simulate Cursor already found via PATH.
+    list.push(InstalledIde::new(Ide::Cursor, "Cursor", PathBuf::from("cursor")));
+    detect_common_windows_locations_in(&mut list, home);
+    assert_eq!(list.iter().filter(|i| i.ide == Ide::Cursor).count(), 1);
+}
+
+#[test]
 fn detect_ides_runs_without_panic() {
     let ides = dev_cli::ide::detect::detect_ides();
     let _ = ides;
