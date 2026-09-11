@@ -10,6 +10,7 @@ use ratatui::{
 
 use crate::tui::theme;
 
+/// Render the widget onto the given frame and area.
 pub fn render(frame: &mut Frame, area: Rect) {
     let title = Line::from(vec![
         Span::raw("🚀 "),

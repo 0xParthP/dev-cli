@@ -4,6 +4,7 @@ use anyhow::Result;
 
 use crate::{config::Config, models::project::Project, scanner};
 
+/// Discover and load all projects based on configuration.
 pub fn load_projects() -> Result<Vec<Project>> {
     let config = Config::load()?;
 

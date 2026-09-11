@@ -39,7 +39,13 @@ where
     F: FnMut(&mut AppState) -> Result<()>,
 {
     let mut state = AppState::new();
+
     state.projects = super::data::load_projects()?;
+    state.load_recent_projects();
+
+    // Runtime starts on Recent.
+    state.active_tab = super::state::Tab::Recent;
+
     run_loop_with_state(terminal, &mut state, handle_events)
 }
 

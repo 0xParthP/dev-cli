@@ -28,3 +28,6 @@ pub const BORDER: Color = Color::Rgb(45, 70, 95);
 
 /// Selected row background.
 pub const HIGHLIGHT_BG: Color = Color::Rgb(0, 120, 180);
+
+/// Info text.
+pub const INFO: Color = Color::Rgb(125, 180, 255);

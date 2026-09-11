@@ -1,5 +1,8 @@
 use anyhow::Result;
-use dev_cli::tui::{state::AppState, ui};
+use dev_cli::tui::{
+    state::{AppState, Tab},
+    ui,
+};
 use ratatui::{Terminal, backend::TestBackend};
 
 #[test]
@@ -72,6 +75,25 @@ fn dashboard_renders_tabs() -> Result<()> {
     assert!(rendered.contains("Recent"));
     assert!(rendered.contains("IDE"));
     assert!(rendered.contains("Settings"));
+
+    Ok(())
+}
+
+#[test]
+fn dashboard_opens_on_recent_tab() -> Result<()> {
+    let backend = TestBackend::new(80, 20);
+    let mut terminal = Terminal::new(backend)?;
+
+    let mut state = AppState::new();
+    state.active_tab = Tab::Recent;
+
+    terminal.draw(|frame| ui::render(frame, &state))?;
+
+    let rendered: String =
+        terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+    assert!(rendered.contains("Recent Projects"));
+    assert!(rendered.contains("No recent projects"));
 
     Ok(())
 }

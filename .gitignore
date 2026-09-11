@@ -11,4 +11,5 @@ lcov.info
 graphify-out/*
 .serena/
 .vscode/
+.agents/
 .scannerwork/

@@ -199,7 +199,7 @@ temporary directory via the `DEVCLI_CONFIG_DIR` env var.
 
 **No cached IDE paths in config** — re-detect on every run. Detection is fast (tens of milliseconds) and executables move or get uninstalled. Caching creates stale-config bugs without saving real time.
 
-**Layered architecture** — each layer is independently testable. Adding a TUI or HTTP front-end later means writing a new top layer; the services stay put.
+**Layered architecture** — each layer is independently testable. The CLI is driven by Clap, and there's a ratatui-based Terminal UI (TUI). Services stay put across interfaces.
 
 **Rust, single static binary** — fast startup (a CLI that takes a second to launch is dead on arrival), strong type system, easy distribution.
 

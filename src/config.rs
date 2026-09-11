@@ -22,8 +22,9 @@ use std::{fs, path::PathBuf};
 use anyhow::{Context, Result};
 use directories::{BaseDirs, ProjectDirs};
 use serde::{Deserialize, Serialize};
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::models::ide::Ide;
+use crate::models::{ide::Ide, project::Project, recent_project::RecentProject};
 
 /// User configuration for dev-cli.
 ///
@@ -34,10 +35,12 @@ pub struct Config {
     /// Directories to search for Git repositories.
     pub projects_root: Vec<PathBuf>,
 
-    /// Default IDE to use when opening projects.
-    ///
-    /// Can be overridden on a per-command basis with `--ide` flag.
+    /// Default IDE used when opening projects.
     pub default_ide: Ide,
+
+    /// Recently opened projects.
+    #[serde(default)]
+    pub recent_projects: Vec<RecentProject>,
 }
 
 impl Default for Config {
@@ -49,7 +52,11 @@ impl Default for Config {
     fn default() -> Self {
         let home = BaseDirs::new().expect("Couldn't find home directory").home_dir().to_path_buf();
 
-        Self { projects_root: vec![home.join("Projects")], default_ide: Ide::Vscode }
+        Self {
+            projects_root: vec![home.join("Projects")],
+            default_ide: Ide::Vscode,
+            recent_projects: Vec::new(),
+        }
     }
 }
 
@@ -149,5 +156,27 @@ impl Config {
     pub fn create(config: Self) -> Result<Self> {
         config.save()?;
         Ok(config)
+    }
+
+    fn now_timestamp() -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("System time before Unix epoch")
+            .as_secs()
+    }
+
+    pub fn add_recent_project(&mut self, project: &Project) {
+        self.recent_projects.retain(|p| p.path != project.path);
+
+        self.recent_projects.insert(
+            0,
+            RecentProject {
+                name: project.name.clone(),
+                path: project.path.clone(),
+                last_opened: Self::now_timestamp(),
+            },
+        );
+
+        self.recent_projects.truncate(10);
     }
 }

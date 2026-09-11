@@ -5,12 +5,9 @@ use predicates::prelude::*;
 use serial_test::serial;
 use tempfile::TempDir;
 
-#[cfg(unix)]
 use common::temp_project::TempProject;
-#[cfg(unix)]
 use std::{fs, io::Write};
 
-#[cfg(unix)]
 fn create_fake_executable() -> std::path::PathBuf {
     let dir = TempDir::new().unwrap();
     let dir_path = dir.keep();
@@ -26,11 +23,14 @@ fn create_fake_executable() -> std::path::PathBuf {
         writeln!(file, "#!/bin/sh").unwrap();
         writeln!(file, "exit 0").unwrap();
 
-        use std::os::unix::fs::PermissionsExt;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
 
-        let mut perms = file.metadata().unwrap().permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&path, perms).unwrap();
+            let mut perms = file.metadata().unwrap().permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&path, perms).unwrap();
+        }
     }
 
     drop(file);
@@ -38,29 +38,20 @@ fn create_fake_executable() -> std::path::PathBuf {
     path
 }
 
-/// Build a `dev` command that points the platform config directory at an
-/// isolated temp dir.
 fn dev_cmd_isolated() -> (Command, TempDir) {
     let tmp = TempDir::new().expect("create temp dir");
-    let dir_str = tmp.path().to_string_lossy().into_owned();
 
     let mut cmd = Command::cargo_bin("dev").unwrap();
-    if cfg!(windows) {
-        cmd.env("APPDATA", &dir_str);
-        cmd.env("LOCALAPPDATA", &dir_str);
-    } else {
-        cmd.env("XDG_CONFIG_HOME", &dir_str);
-        cmd.env("HOME", &dir_str);
-    }
+    cmd.env("DEVCLI_CONFIG_DIR", tmp.path());
 
     (cmd, tmp)
 }
 
 #[test]
 fn unknown_project_returns_error() {
-    Command::cargo_bin("dev")
-        .unwrap()
-        .args(["open", "DoesNotExist"])
+    let (mut cmd, _tmp) = dev_cmd_isolated();
+
+    cmd.args(["open", "DoesNotExist"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("Project"));
@@ -68,21 +59,16 @@ fn unknown_project_returns_error() {
 
 #[test]
 fn help_for_open_command_works() {
-    Command::cargo_bin("dev")
-        .unwrap()
-        .args(["open", "--help"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Usage"));
+    let (mut cmd, _tmp) = dev_cmd_isolated();
+
+    cmd.args(["open", "--help"]).assert().success().stdout(predicate::str::contains("Usage"));
 }
 
 #[test]
 fn open_with_specific_ide_parses() {
-    Command::cargo_bin("dev")
-        .unwrap()
-        .args(["open", "FakeProject", "--ide", "vscode"])
-        .assert()
-        .failure();
+    let (mut cmd, _tmp) = dev_cmd_isolated();
+
+    cmd.args(["open", "FakeProject", "--ide", "vscode"]).assert().failure();
 }
 
 #[test]
@@ -96,8 +82,7 @@ fn project_list_runs() {
         .stdout(predicate::str::contains("Configured Project Roots"));
 }
 
-/// UNIX only test that creates a fake project and a fake executable to test the `dev open` command.
-#[cfg(unix)]
+/// Cross-platform test that creates a fake project and a fake executable to test the `dev open` command.
 #[test]
 #[serial]
 fn open_existing_project_with_test_executable() {

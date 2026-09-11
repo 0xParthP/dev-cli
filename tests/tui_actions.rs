@@ -2,11 +2,10 @@ use anyhow::{Result, anyhow};
 use temp_env::with_var;
 use tempfile::TempDir;
 
-use dev_cli::{
-    config::Config,
-    models::{ide::Ide, project::Project},
-    tui::actions::open_project_with,
-};
+use dev_cli::{config::Config, models::ide::Ide, tui::actions::open_project_with};
+
+mod common;
+use common::factories::fake_project as project;
 
 fn with_temp_config<F, R>(f: F) -> R
 where
@@ -16,19 +15,11 @@ where
     with_var("DEVCLI_CONFIG_DIR", Some(dir.path()), f)
 }
 
-fn project(name: &str) -> Project {
-    let root = std::env::temp_dir();
-    let path = root.join(name);
-
-    std::fs::create_dir_all(path.join(".git")).unwrap();
-
-    Project { name: name.into(), path: path.clone(), root, git_dir: path.join(".git") }
-}
-
 #[test]
 fn open_project_uses_default_ide() -> Result<()> {
     with_temp_config(|| -> Result<()> {
-        Config { projects_root: vec![], default_ide: Ide::Vscode }.save()?;
+        Config { projects_root: vec![], default_ide: Ide::Vscode, recent_projects: Vec::new() }
+            .save()?;
 
         let project = project("demo");
 
@@ -49,7 +40,8 @@ fn open_project_uses_default_ide() -> Result<()> {
 #[test]
 fn open_project_propagates_launcher_error() -> Result<()> {
     with_temp_config(|| -> Result<()> {
-        Config { projects_root: vec![], default_ide: Ide::Vscode }.save()?;
+        Config { projects_root: vec![], default_ide: Ide::Vscode, recent_projects: Vec::new() }
+            .save()?;
 
         let project = project("demo");
 

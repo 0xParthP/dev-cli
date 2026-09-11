@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::{env, fs};
 use std::{path::Path, process::Command};
+use temp_env::with_var;
 
 static FAKE_EXE_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -39,61 +40,37 @@ fn fake_executable() -> String {
 #[test]
 #[serial]
 fn launch_cursor_uses_test_executable() {
-    unsafe {
-        std::env::set_var("DEVCLI_TEST_EXECUTABLE", fake_executable());
-    }
-
-    let result = launcher::launch(Ide::Cursor, Path::new("."));
-    assert!(result.is_ok());
-
-    unsafe {
-        std::env::remove_var("DEVCLI_TEST_EXECUTABLE");
-    }
+    with_var("DEVCLI_TEST_EXECUTABLE", Some(fake_executable()), || {
+        let result = launcher::launch(Ide::Cursor, Path::new("."));
+        assert!(result.is_ok());
+    });
 }
 
 #[test]
 #[serial]
 fn launch_terminal_uses_test_executable() {
-    unsafe {
-        std::env::set_var("DEVCLI_TEST_EXECUTABLE", fake_executable());
-    }
-
-    let result = launcher::launch(Ide::Terminal, Path::new("."));
-    assert!(result.is_ok());
-
-    unsafe {
-        std::env::remove_var("DEVCLI_TEST_EXECUTABLE");
-    }
+    with_var("DEVCLI_TEST_EXECUTABLE", Some(fake_executable()), || {
+        let result = launcher::launch(Ide::Terminal, Path::new("."));
+        assert!(result.is_ok());
+    });
 }
 
 #[test]
 #[serial]
 fn launch_claude_uses_test_executable() {
-    unsafe {
-        std::env::set_var("DEVCLI_TEST_EXECUTABLE", fake_executable());
-    }
-
-    let result = launcher::launch(Ide::Claude, Path::new("."));
-    assert!(result.is_ok());
-
-    unsafe {
-        std::env::remove_var("DEVCLI_TEST_EXECUTABLE");
-    }
+    with_var("DEVCLI_TEST_EXECUTABLE", Some(fake_executable()), || {
+        let result = launcher::launch(Ide::Claude, Path::new("."));
+        assert!(result.is_ok());
+    });
 }
 
 #[test]
 #[serial]
 fn launch_fails_when_executable_is_invalid() {
-    unsafe {
-        std::env::set_var("DEVCLI_TEST_EXECUTABLE", "definitely-not-a-real-executable");
-    }
-
-    let result = launcher::launch(Ide::Cursor, Path::new("."));
-    assert!(result.is_err());
-
-    unsafe {
-        std::env::remove_var("DEVCLI_TEST_EXECUTABLE");
-    }
+    with_var("DEVCLI_TEST_EXECUTABLE", Some("definitely-not-a-real-executable"), || {
+        let result = launcher::launch(Ide::Cursor, Path::new("."));
+        assert!(result.is_err());
+    });
 }
 
 #[test]
@@ -114,86 +91,68 @@ fn fake_executable_runs_successfully() {
 #[serial]
 fn launch_idea_not_installed_returns_error() {
     // Ensure no test executable is set
-    unsafe {
-        env::remove_var("DEVCLI_TEST_EXECUTABLE");
-    }
+    with_var("DEVCLI_TEST_EXECUTABLE", None::<&str>, || {
+        // Ide::Idea is never detected by detect_ides(), so this should fail
+        let result = launcher::launch(Ide::Idea, Path::new("."));
+        assert!(result.is_err());
 
-    // Ide::Idea is never detected by detect_ides(), so this should fail
-    let result = launcher::launch(Ide::Idea, Path::new("."));
-    assert!(result.is_err());
-
-    // Check that it's the "not installed" error
-    let err = result.unwrap_err();
-    assert!(err.to_string().contains("Idea is not installed"));
+        // Check that it's the "not installed" error
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Idea is not installed"));
+    });
 }
 
 #[test]
 #[serial]
 fn launch_spawn_claude() {
-    unsafe {
-        env::remove_var("DEVCLI_TEST_EXECUTABLE");
-    }
-
-    let executable = fake_executable();
-    let result = launcher::launch_spawn(Ide::Claude, Path::new("."), Path::new(&executable));
-    assert!(result.is_ok());
+    with_var("DEVCLI_TEST_EXECUTABLE", None::<&str>, || {
+        let executable = fake_executable();
+        let result = launcher::launch_spawn(Ide::Claude, Path::new("."), Path::new(&executable));
+        assert!(result.is_ok());
+    });
 }
 
 #[test]
 #[serial]
 fn launch_spawn_terminal() {
-    unsafe {
-        env::remove_var("DEVCLI_TEST_EXECUTABLE");
-    }
-
-    let executable = fake_executable();
-    let result = launcher::launch_spawn(Ide::Terminal, Path::new("."), Path::new(&executable));
-    assert!(result.is_ok());
+    with_var("DEVCLI_TEST_EXECUTABLE", None::<&str>, || {
+        let executable = fake_executable();
+        let result = launcher::launch_spawn(Ide::Terminal, Path::new("."), Path::new(&executable));
+        assert!(result.is_ok());
+    });
 }
 
 #[test]
 #[serial]
 fn launch_spawn_vscode() {
-    unsafe {
-        env::remove_var("DEVCLI_TEST_EXECUTABLE");
-    }
-
-    let executable = fake_executable();
-    let result = launcher::launch_spawn(Ide::Vscode, Path::new("."), Path::new(&executable));
-    assert!(result.is_ok());
+    with_var("DEVCLI_TEST_EXECUTABLE", None::<&str>, || {
+        let executable = fake_executable();
+        let result = launcher::launch_spawn(Ide::Vscode, Path::new("."), Path::new(&executable));
+        assert!(result.is_ok());
+    });
 }
 
 #[test]
 #[serial]
 fn launch_spawn_cursor() {
-    unsafe {
-        env::remove_var("DEVCLI_TEST_EXECUTABLE");
-    }
-
-    let executable = fake_executable();
-    let result = launcher::launch_spawn(Ide::Cursor, Path::new("."), Path::new(&executable));
-    assert!(result.is_ok());
+    with_var("DEVCLI_TEST_EXECUTABLE", None::<&str>, || {
+        let executable = fake_executable();
+        let result = launcher::launch_spawn(Ide::Cursor, Path::new("."), Path::new(&executable));
+        assert!(result.is_ok());
+    });
 }
 
-#[cfg(unix)]
 #[test]
 #[serial]
-fn unix_launcher_accepts_all_supported_ides() {
-    use std::path::Path;
+fn launcher_accepts_all_supported_ides() {
+    let fake = fake_executable();
 
-    use dev_cli::models::ide::Ide;
+    with_var("DEVCLI_TEST_EXECUTABLE", Some(&fake), || {
+        let project = Path::new(".");
 
-    unsafe {
-        std::env::set_var("DEVCLI_TEST_EXECUTABLE", "true");
-    }
-
-    let project = Path::new(".");
-
-    assert!(dev_cli::ide::launcher::launch(Ide::Terminal, project).is_ok());
-    assert!(dev_cli::ide::launcher::launch(Ide::Cursor, project).is_ok());
-    assert!(dev_cli::ide::launcher::launch(Ide::Claude, project).is_ok());
-
-    unsafe {
-        std::env::remove_var("DEVCLI_TEST_EXECUTABLE");
-    }
+        assert!(dev_cli::ide::launcher::launch(Ide::Terminal, project).is_ok());
+        assert!(dev_cli::ide::launcher::launch(Ide::Cursor, project).is_ok());
+        assert!(dev_cli::ide::launcher::launch(Ide::Claude, project).is_ok());
+        assert!(dev_cli::ide::launcher::launch(Ide::Vscode, project).is_ok());
+    });
 }

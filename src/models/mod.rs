@@ -10,3 +10,4 @@
 
 pub mod ide;
 pub mod project;
+pub mod recent_project;
