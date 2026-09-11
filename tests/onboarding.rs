@@ -98,7 +98,18 @@ fn onboarding_module_exposes_expected_public_api() {
     use dev_cli::onboarding;
 
     let _: fn() -> anyhow::Result<()> = onboarding::ensure_onboarded;
+    let _: fn() -> anyhow::Result<()> = onboarding::run_onboarding;
     let _: fn() -> String = onboarding::default_projects_dir;
+}
+
+#[test]
+#[serial]
+fn run_onboarding_returns_ok_in_non_interactive_mode() {
+    with_temp_config(|| {
+        with_var("DEVCLI_SKIP_ONBOARDING", Some("1"), || {
+            assert!(dev_cli::onboarding::run_onboarding().is_ok());
+        });
+    });
 }
 
 #[test]

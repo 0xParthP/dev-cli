@@ -9,9 +9,14 @@ use crate::{config::Config, models::ide::Ide};
 
 /// Runs onboarding only if `config.toml` doesn't exist.
 pub fn ensure_onboarded() -> Result<()> {
-    if is_interactive_terminal() {
-        run_onboarding_if_needed()?;
+    if Config::exists()? {
+        return Ok(());
     }
+
+    if is_interactive_terminal() {
+        run_onboarding()?;
+    }
+
     Ok(())
 }
 
@@ -23,18 +28,12 @@ fn is_interactive_terminal() -> bool {
     std::io::stdin().is_terminal() && std::io::stdout().is_terminal()
 }
 
-/// Loads the config or runs the wizard, but only when attached to a TTY.
-fn run_onboarding_if_needed() -> Result<()> {
-    if Config::exists()? {
+/// Interactive setup wizard.
+pub fn run_onboarding() -> Result<()> {
+    if !is_interactive_terminal() {
         return Ok(());
     }
 
-    run_onboarding()
-}
-
-/// Interactive setup wizard.
-#[cfg(not(coverage))]
-pub fn run_onboarding() -> Result<()> {
     intro("🚀 Welcome to dev-cli")?;
 
     let default_projects = default_projects_dir();
@@ -80,16 +79,9 @@ pub fn run_onboarding() -> Result<()> {
     Ok(())
 }
 
-/// Interactive setup wizard stub for coverage runs.
-#[cfg(coverage)]
-pub fn run_onboarding() -> Result<()> {
-    Ok(())
-}
-
 /// Default `~/Projects` path.
 pub fn default_projects_dir() -> String {
-    match directories::BaseDirs::new() {
-        Some(dirs) => dirs.home_dir().join("Projects").display().to_string(),
-        None => String::from("~/Projects"),
-    }
+    directories::BaseDirs::new()
+        .map(|dirs| dirs.home_dir().join("Projects").display().to_string())
+        .unwrap_or_else(|| String::from("~/Projects"))
 }
