@@ -14,9 +14,7 @@ where
     F: FnOnce() -> R,
 {
     let dir = TempDir::new().unwrap();
-    with_var("DEVCLI_CONFIG_DIR", Some(dir.path()), || {
-        with_var("DEVCLI_SKIP_ONBOARDING", Some("1"), f)
-    })
+    with_var("DEVCLI_CONFIG_DIR", Some(dir.path()), f)
 }
 
 #[test]
@@ -51,18 +49,20 @@ fn ensure_onboarded_returns_ok_when_config_exists() {
 #[serial]
 fn ensure_onboarded_returns_ok_when_config_missing_but_no_terminal() {
     with_temp_config(|| {
-        let path = Config::path().unwrap();
+        with_var("DEVCLI_SKIP_ONBOARDING", Some("1"), || {
+            let path = Config::path().unwrap();
 
-        if path.exists() {
-            std::fs::remove_file(&path).unwrap();
-        }
+            if path.exists() {
+                std::fs::remove_file(&path).unwrap();
+            }
 
-        assert!(!Config::exists().unwrap());
+            assert!(!Config::exists().unwrap());
 
-        assert!(ensure_onboarded().is_ok());
+            assert!(ensure_onboarded().is_ok());
 
-        // Wizard must not create a config when not attached to a TTY or when skipped.
-        assert!(!Config::exists().unwrap(), "non-terminal/skipped run must not create config");
+            // Wizard must not create a config when not attached to a TTY or when skipped.
+            assert!(!Config::exists().unwrap(), "non-terminal/skipped run must not create config");
+        });
     });
 }
 
