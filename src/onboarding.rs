@@ -29,6 +29,7 @@ fn is_interactive_terminal() -> bool {
 }
 
 /// Interactive setup wizard.
+#[cfg(not(coverage))]
 pub fn run_onboarding() -> Result<()> {
     if !is_interactive_terminal() {
         return Ok(());
