@@ -10,12 +10,8 @@ use crate::{
 };
 
 pub fn open_path(path: &Path) -> anyhow::Result<()> {
-    let mut config = Config::load()?;
-    launcher::launch(config.default_ide, path)?;
     let project = Project::new(path.to_path_buf(), path.to_path_buf());
-    config.add_recent_project(&project);
-    config.save()?;
-    Ok(())
+    open_project(&project)
 }
 
 /// Open a project using the real launcher.
