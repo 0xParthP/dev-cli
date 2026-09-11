@@ -1,5 +1,6 @@
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+use serial_test::serial;
 
 use dev_cli::{
     config::Config,
@@ -339,4 +340,34 @@ fn enter_key_on_recent_tab_does_not_quit_on_error() {
     );
 
     assert!(!state.should_quit);
+}
+
+#[test]
+#[serial]
+fn enter_key_on_recent_tab_reupdates_recent_project_in_config() {
+    with_temp_config(|| {
+        let mut config = Config::default();
+        let old_project = project("old_app");
+        let target_project = project("target_app");
+        config.add_recent_project(&target_project);
+        config.add_recent_project(&old_project);
+        config.save().unwrap();
+
+        let mut state = AppState::new();
+        state.active_tab = Tab::Recent;
+        state.load_recent_projects();
+        assert_eq!(state.recent_projects[0].name, "old_app");
+        assert_eq!(state.recent_projects[1].name, "target_app");
+
+        state.selected_index = 1;
+
+        handle_key_with_launcher(
+            KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
+            &mut state,
+            |p| actions::open_project_with(p, |_, _| Ok(())),
+        );
+
+        let updated_config = Config::load().unwrap();
+        assert_eq!(updated_config.recent_projects[0].name, "target_app");
+    });
 }

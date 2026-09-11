@@ -69,7 +69,10 @@ where
 
             Tab::Recent => {
                 if let Some(recent) = state.selected_recent_project() {
-                    let project = Project::new(recent.path.clone(), recent.path.clone());
+                    let mut project = Project::new(recent.path.clone(), recent.path.clone());
+                    if !recent.name.is_empty() {
+                        project.name = recent.name.clone();
+                    }
                     if launcher(&project).is_ok() {
                         state.quit();
                     }
