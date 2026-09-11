@@ -101,6 +101,15 @@ fn run_open_test(ide: &str) {
         std::fs::copy(comspec, &exe_path).ok();
     } else {
         std::fs::write(&exe_path, "#!/bin/sh\nexit 0\n").ok();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Ok(meta) = std::fs::metadata(&exe_path) {
+                let mut perms = meta.permissions();
+                perms.set_mode(0o755);
+                let _ = std::fs::set_permissions(&exe_path, perms);
+            }
+        }
     }
 
     let path_sep = if cfg!(windows) { ";" } else { ":" };
@@ -155,6 +164,15 @@ fn open_shortcut_command_runs() {
         std::fs::copy(comspec, &exe_path).ok();
     } else {
         std::fs::write(&exe_path, "#!/bin/sh\nexit 0\n").ok();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Ok(meta) = std::fs::metadata(&exe_path) {
+                let mut perms = meta.permissions();
+                perms.set_mode(0o755);
+                let _ = std::fs::set_permissions(&exe_path, perms);
+            }
+        }
     }
 
     let path_sep = if cfg!(windows) { ";" } else { ":" };

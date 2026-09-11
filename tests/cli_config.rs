@@ -27,10 +27,20 @@ fn isolated_cmd(dir: &TempDir) -> Command {
         std::fs::copy(comspec, &exe_path).ok();
     } else {
         std::fs::write(&exe_path, "#!/bin/sh\nexit 0\n").ok();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Ok(meta) = std::fs::metadata(&exe_path) {
+                let mut perms = meta.permissions();
+                perms.set_mode(0o755);
+                let _ = std::fs::set_permissions(&exe_path, perms);
+            }
+        }
     }
 
+    let path_sep = if cfg!(windows) { ";" } else { ":" };
     let path_var = match std::env::var("PATH") {
-        Ok(p) => format!("{};{}", bin_dir.display(), p),
+        Ok(p) => format!("{}{}{}", bin_dir.display(), path_sep, p),
         Err(_) => bin_dir.display().to_string(),
     };
 
