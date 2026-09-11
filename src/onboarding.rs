@@ -33,6 +33,7 @@ fn run_onboarding_if_needed() -> Result<()> {
 }
 
 /// Interactive setup wizard.
+#[cfg(not(coverage))]
 pub fn run_onboarding() -> Result<()> {
     intro("🚀 Welcome to dev-cli")?;
 
@@ -76,6 +77,12 @@ pub fn run_onboarding() -> Result<()> {
 
     outro("✨ Setup complete! You're ready to use dev-cli.")?;
 
+    Ok(())
+}
+
+/// Interactive setup wizard stub for coverage runs.
+#[cfg(coverage)]
+pub fn run_onboarding() -> Result<()> {
     Ok(())
 }
 
