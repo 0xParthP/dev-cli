@@ -68,10 +68,11 @@ where
             }
 
             Tab::Recent => {
-                if let Some(project) = state.selected_recent_project()
-                    && actions::open_path(&project.path).is_ok()
-                {
-                    state.quit();
+                if let Some(recent) = state.selected_recent_project() {
+                    let project = Project::new(recent.path.clone(), recent.path.clone());
+                    if launcher(&project).is_ok() {
+                        state.quit();
+                    }
                 }
             }
 

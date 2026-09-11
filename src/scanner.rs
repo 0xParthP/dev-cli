@@ -81,7 +81,10 @@ fn scan_root(root: &Path, projects: &mut Vec<Project>, seen: &mut HashSet<PathBu
         let path = entry.path();
 
         if is_git_repo(path) {
-            let repo_root = path.canonicalize()?;
+            let repo_root = match path.canonicalize() {
+                Ok(p) => p,
+                Err(_) => continue,
+            };
 
             if seen.insert(repo_root.clone()) {
                 projects.push(Project::new(repo_root, root.to_path_buf()));

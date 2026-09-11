@@ -94,8 +94,10 @@ fn detect_cli(list: &mut Vec<InstalledIde>, ide: Ide, name: &str, cmd: &str) {
 ///
 /// * `list` — List to append to
 fn detect_common_windows_locations(list: &mut Vec<InstalledIde>) {
-    // Use expect here because this is initialization, avoiding unwraps without context
-    let home = BaseDirs::new().expect("home directory must exist").home_dir().to_path_buf();
+    let home = match BaseDirs::new() {
+        Some(dirs) => dirs.home_dir().to_path_buf(),
+        None => return,
+    };
     detect_common_windows_locations_in(list, &home);
 }
 
