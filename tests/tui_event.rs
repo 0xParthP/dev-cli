@@ -296,3 +296,47 @@ fn right_arrow_does_not_go_past_settings() {
 
     assert_eq!(state.active_tab, Tab::Settings);
 }
+
+#[test]
+fn enter_key_on_recent_tab_launches_project() {
+    let mut state = AppState::new();
+    state.active_tab = Tab::Recent;
+    state.recent_projects = vec![dev_cli::models::recent_project::RecentProject {
+        name: "recent_app".into(),
+        path: std::path::PathBuf::from("/tmp/recent_app"),
+        last_opened: 100,
+    }];
+
+    let launched = std::sync::atomic::AtomicBool::new(false);
+    handle_key_with_launcher(
+        KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
+        &mut state,
+        |project| {
+            launched.store(true, std::sync::atomic::Ordering::Relaxed);
+            assert_eq!(project.name, "recent_app");
+            Ok(())
+        },
+    );
+
+    assert!(launched.load(std::sync::atomic::Ordering::Relaxed));
+    assert!(state.should_quit);
+}
+
+#[test]
+fn enter_key_on_recent_tab_does_not_quit_on_error() {
+    let mut state = AppState::new();
+    state.active_tab = Tab::Recent;
+    state.recent_projects = vec![dev_cli::models::recent_project::RecentProject {
+        name: "recent_app".into(),
+        path: std::path::PathBuf::from("/tmp/recent_app"),
+        last_opened: 100,
+    }];
+
+    handle_key_with_launcher(
+        KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
+        &mut state,
+        |_project| Err(anyhow::anyhow!("failed to launch")),
+    );
+
+    assert!(!state.should_quit);
+}

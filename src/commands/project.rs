@@ -56,7 +56,10 @@ fn open(args: OpenArgs) -> Result<()> {
 
     let projects = scanner::discover_projects(&config.projects_root)?;
 
-    let Some(project) = projects.into_iter().find(|p| p.name == args.project) else {
+    let Some(project) = projects
+        .into_iter()
+        .find(|p| p.name.eq_ignore_ascii_case(&args.project) || p.name == args.project)
+    else {
         bail!("Project '{}' not found.", args.project);
     };
 

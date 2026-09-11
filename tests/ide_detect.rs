@@ -66,3 +66,9 @@ fn vscode_not_added_twice() {
     detect_common_windows_locations_in(&mut list, home);
     assert_eq!(list.iter().filter(|i| i.ide == Ide::Vscode).count(), 1);
 }
+
+#[test]
+fn detect_ides_runs_without_panic() {
+    let ides = dev_cli::ide::detect::detect_ides();
+    let _ = ides;
+}

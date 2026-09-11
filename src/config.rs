@@ -50,7 +50,9 @@ impl Default for Config {
     /// - `projects_root` — `~/Projects` directory
     /// - `default_ide` — VS Code
     fn default() -> Self {
-        let home = BaseDirs::new().expect("Couldn't find home directory").home_dir().to_path_buf();
+        let home = BaseDirs::new()
+            .map(|b| b.home_dir().to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("."));
 
         Self {
             projects_root: vec![home.join("Projects")],
@@ -159,10 +161,7 @@ impl Config {
     }
 
     fn now_timestamp() -> u64 {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("System time before Unix epoch")
-            .as_secs()
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
     }
 
     pub fn add_recent_project(&mut self, project: &Project) {
