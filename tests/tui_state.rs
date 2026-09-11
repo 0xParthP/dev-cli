@@ -1,14 +1,7 @@
-use dev_cli::{models::project::Project, tui::state::AppState};
+use crate::common::factories::fake_project as project;
+use dev_cli::tui::state::AppState;
 
-fn project(name: &str) -> Project {
-    let root = std::env::temp_dir();
-    let path = root.join(name);
-
-    // Ensure the fake project directory actually exists.
-    std::fs::create_dir_all(path.join(".git")).unwrap();
-
-    Project { name: name.into(), path: path.clone(), root, git_dir: path.join(".git") }
-}
+mod common;
 
 #[test]
 fn app_state_starts_empty() {
@@ -146,10 +139,18 @@ fn search_filters_projects() {
 }
 
 #[test]
-fn move_down_stops_at_end() {
-    let mut state = AppState::new();
+fn move_down_on_recent_tab_stops_at_end() {
+    use dev_cli::models::recent_project::RecentProject;
+    use dev_cli::tui::state::Tab;
+    use std::path::PathBuf;
 
-    state.projects = vec![project("a"), project("b")];
+    let mut state = AppState::new();
+    state.active_tab = Tab::Recent;
+
+    state.recent_projects = vec![
+        RecentProject { name: "a".into(), path: PathBuf::from("/a"), last_opened: 0 },
+        RecentProject { name: "b".into(), path: PathBuf::from("/b"), last_opened: 0 },
+    ];
 
     state.move_down();
     state.move_down();

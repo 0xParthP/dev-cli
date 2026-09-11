@@ -38,15 +38,15 @@ Instructions for AI coding assistants (Claude, GitHub Copilot, etc.) working wit
 ### Layered Architecture
 
 ```
-┌─────────────────────────────────────┐
-│     CLI Layer (src/cli.rs)          │
-│  Clap-based argument parsing        │
-└────────────┬────────────────────────┘
-             ↓
-┌─────────────────────────────────────┐
-│  Commands Layer (src/commands/*)    │
-│  Command handlers & orchestration   │
-└────────────┬────────────────────────┘
+┌─────────────────────────────────────┐     ┌─────────────────────────────────────┐
+│     CLI Layer (src/cli.rs)          │     │     TUI Layer (src/tui/*)           │
+│  Clap-based argument parsing        │     │  Ratatui-based interactive UI       │
+└────────────┬────────────────────────┘     └────────────┬────────────────────────┘
+             ↓                                           ↓
+┌─────────────────────────────────────┴───────────────────────────────────────────┐
+│                    Commands Layer (src/commands/*)                              │
+│                    Command handlers & orchestration                             │
+└────────────┬────────────────────────────────────────────────────────────────────┘
              ↓
 ┌─────────────────────────────────────┐
 │  Services Layer (src/*.rs)          │
@@ -72,6 +72,7 @@ Instructions for AI coding assistants (Claude, GitHub Copilot, etc.) working wit
 | `src/models/` | Data structures |
 | `src/scanner.rs` | Repository discovery |
 | `src/installer.rs` | Installation logic |
+| `src/tui/` | Ratatui-based interactive terminal UI |
 | `tests/` | Integration tests |
 | `docs/` | User and developer guides |
 
@@ -213,18 +214,18 @@ if path.exists() { }
 
 ### Unit Tests
 
-Add within the source file:
+**Do NOT test inside `src/`. All tests live in `tests/`.**
+
+Add under the `tests/` directory (e.g., `tests/config.rs`):
 
 ```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
+use dev_cli::config::Config;
+use dev_cli::models::ide::Ide;
 
-    #[test]
-    fn test_config_defaults() {
-        let config = Config::default();
-        assert_eq!(config.default_ide, Ide::Vscode);
-    }
+#[test]
+fn test_config_defaults() {
+    let config = Config::default();
+    assert_eq!(config.default_ide, Ide::Vscode);
 }
 ```
 

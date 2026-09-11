@@ -3,13 +3,16 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, Ke
 
 use dev_cli::{
     config::Config,
-    models::{ide::Ide, project::Project},
+    models::ide::Ide,
     tui::{
         actions,
         event::{handle_events_with, handle_key, handle_key_with_launcher},
         state::{AppState, Tab},
     },
 };
+
+mod common;
+use common::factories::fake_project as project;
 
 use temp_env::with_var;
 use tempfile::TempDir;
@@ -21,16 +24,6 @@ where
     let dir = TempDir::new().unwrap();
 
     with_var("DEVCLI_CONFIG_DIR", Some(dir.path()), f)
-}
-
-fn project(name: &str) -> Project {
-    let root = std::env::temp_dir();
-    let path = root.join(name);
-
-    // Ensure the fake project directory actually exists.
-    std::fs::create_dir_all(path.join(".git")).unwrap();
-
-    Project { name: name.into(), path: path.clone(), root, git_dir: path.join(".git") }
 }
 
 fn key(code: KeyCode) -> Event {
@@ -145,7 +138,7 @@ fn backspace_removes_character() {
 
 #[test]
 fn enter_key_does_nothing_without_projects() {
-    let mut state = AppState::new();
+    let mut state = AppState::default();
 
     handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE), &mut state);
 
@@ -218,10 +211,11 @@ fn open_project_returns_launcher_error() -> Result<()> {
 
 #[test]
 fn enter_does_nothing_when_filtered_list_is_empty() {
-    let mut state = AppState::new();
-
-    state.projects = vec![project("cursor")];
-    state.search_query = "weather".into(); // filters everything out
+    let mut state = AppState {
+        projects: vec![project("cursor")],
+        search_query: "weather".into(),
+        ..Default::default()
+    };
 
     handle_key_with_launcher(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE), &mut state, |_| {
         panic!("launcher should not be called");
@@ -232,9 +226,7 @@ fn enter_does_nothing_when_filtered_list_is_empty() {
 
 #[test]
 fn enter_does_not_quit_when_open_project_fails() {
-    let mut state = AppState::new();
-
-    state.projects = vec![project("demo")];
+    let mut state = AppState { projects: vec![project("demo")], ..Default::default() };
 
     handle_key_with_launcher(
         KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
@@ -259,6 +251,7 @@ fn poll_false_does_not_read_event() -> Result<()> {
 #[test]
 fn right_arrow_switches_tabs() {
     let mut state = AppState::new();
+    state.active_tab = Tab::Recent;
 
     handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE), &mut state);
     assert_eq!(state.active_tab, Tab::Projects);

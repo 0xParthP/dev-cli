@@ -1,24 +1,24 @@
 //! Recent projects widget.
 
 use std::time::{SystemTime, UNIX_EPOCH};
-use unicode_width::UnicodeWidthStr;
 
 use ratatui::{
     Frame,
     layout::{Alignment, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Borders, ListItem, Paragraph},
 };
+use unicode_width::UnicodeWidthStr;
 
 use crate::{
-    config::Config,
-    tui::{state::AppState, theme},
+    models::recent_project::RecentProject,
+    tui::{state::AppState, theme, widgets::list::render_list},
     utils::path::display_path,
 };
 
 fn format_age(timestamp: u64) -> String {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
 
     let diff = now.saturating_sub(timestamp);
 
@@ -31,12 +31,13 @@ fn format_age(timestamp: u64) -> String {
     }
 }
 
+/// Render the widget onto the given frame and area.
 pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
-    let config = Config::load().unwrap_or_default();
+    let recent_projects: &[RecentProject] = &state.recent_projects;
 
-    let title = format!(" Recent Projects ({}) ", config.recent_projects.len());
+    let title = format!(" Recent Projects ({}) ", recent_projects.len());
 
-    if config.recent_projects.is_empty() {
+    if recent_projects.is_empty() {
         let empty = Paragraph::new(vec![
             Line::from(""),
             Line::from(Span::styled("🕘", Style::default().fg(theme::MUTED))),
@@ -63,21 +64,16 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
         return;
     }
 
-    // Width available inside the bordered list.
     let inner_width = area.width.saturating_sub(4) as usize;
 
-    let items: Vec<ListItem> = config
-        .recent_projects
+    let items: Vec<ListItem> = recent_projects
         .iter()
         .map(|project| {
             let age = format_age(project.last_opened);
-
             let left = format!("📁 {}", project.name);
 
-            // Use terminal display width instead of character count.
             let left_width = UnicodeWidthStr::width(left.as_str());
             let age_width = UnicodeWidthStr::width(age.as_str());
-
             let spacing = inner_width.saturating_sub(left_width + age_width);
 
             ListItem::new(vec![
@@ -98,24 +94,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
         })
         .collect();
 
-    let list = List::new(items)
-        .block(
-            Block::default()
-                .title(title)
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(theme::BORDER)),
-        )
-        .highlight_style(
-            Style::default().bg(theme::HIGHLIGHT_BG).fg(theme::TEXT).add_modifier(Modifier::BOLD),
-        )
-        .highlight_symbol("❯ ");
+    let selected = state.selected_index.min(recent_projects.len().saturating_sub(1));
 
-    let mut list_state = ListState::default();
-
-    // Keep the highlighted row in sync with AppState.
-    let selected = state.selected_index.min(config.recent_projects.len().saturating_sub(1));
-
-    list_state.select(Some(selected));
-
-    frame.render_stateful_widget(list, area, &mut list_state);
+    render_list(frame, area, title, items, Some(selected));
 }

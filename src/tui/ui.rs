@@ -7,13 +7,14 @@ use ratatui::{
     widgets::Block,
 };
 
-use crate::tui::widgets::{footer, header, project_list, search, tabs};
+use crate::tui::widgets::{footer, header, placeholder, project_list, recent, search, tabs};
 
 use super::{
     state::{AppState, Tab},
     theme,
 };
 
+/// Render the widget onto the given frame and area.
 pub fn render(frame: &mut Frame, state: &AppState) {
     frame.render_widget(Block::default().bg(theme::BACKGROUND), frame.area());
 
@@ -34,11 +35,13 @@ pub fn render(frame: &mut Frame, state: &AppState) {
             search::render(frame, chunks[2], state);
             project_list::render(frame, chunks[3], state);
         }
-
-        _ => {
-            // Leave the search area blank for other tabs.
+        Tab::Recent => {
             frame.render_widget(Block::default(), chunks[2]);
-            project_list::render(frame, chunks[3], state);
+            recent::render(frame, chunks[3], state);
+        }
+        Tab::Ide | Tab::Settings => {
+            frame.render_widget(Block::default(), chunks[2]);
+            placeholder::render(frame, chunks[3], state.active_tab);
         }
     }
 

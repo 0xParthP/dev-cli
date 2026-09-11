@@ -1,4 +1,5 @@
 use dev_cli::{config::Config, models::ide::Ide};
+use temp_env::with_var;
 use tempfile::TempDir;
 
 #[allow(dead_code)]
@@ -16,16 +17,5 @@ where
     F: FnOnce() -> R,
 {
     let dir = TempDir::new().unwrap();
-
-    unsafe {
-        std::env::set_var("DEVCLI_CONFIG_DIR", dir.path());
-    }
-
-    let result = f();
-
-    unsafe {
-        std::env::remove_var("DEVCLI_CONFIG_DIR");
-    }
-
-    result
+    with_var("DEVCLI_CONFIG_DIR", Some(dir.path()), f)
 }

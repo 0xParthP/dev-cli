@@ -5,14 +5,16 @@ use std::time::Duration;
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 
-use crate::{config::Config, models::project::Project, tui::state::Tab};
+use crate::{models::project::Project, tui::state::Tab};
 
 use super::{actions, state::AppState};
 
+/// Poll and handle terminal events.
 pub fn handle_events(state: &mut AppState) -> Result<()> {
     handle_events_with(state, event::poll, event::read)
 }
 
+/// Poll and handle terminal events with custom implementations.
 pub fn handle_events_with<P, R>(state: &mut AppState, poll: P, read: R) -> Result<()>
 where
     P: Fn(Duration) -> Result<bool, std::io::Error>,
@@ -30,10 +32,12 @@ where
     Ok(())
 }
 
+/// Handle standard key events.
 pub fn handle_key(key: KeyEvent, state: &mut AppState) {
     handle_key_with_launcher(key, state, actions::open_project)
 }
 
+/// Handle key events with a custom launcher dependency injection.
 pub fn handle_key_with_launcher<L>(key: KeyEvent, state: &mut AppState, launcher: L)
 where
     L: Fn(&Project) -> Result<()>,
@@ -64,9 +68,7 @@ where
             }
 
             Tab::Recent => {
-                let config = Config::load().unwrap_or_default();
-
-                if let Some(project) = config.recent_projects.get(state.selected_index)
+                if let Some(project) = state.selected_recent_project()
                     && actions::open_path(&project.path).is_ok()
                 {
                     state.quit();
@@ -83,6 +85,9 @@ where
                 Tab::Ide => Tab::Projects,
                 Tab::Settings => Tab::Ide,
             };
+
+            state.selected_index = 0;
+            state.clamp_selection();
         }
 
         KeyCode::Right => {
@@ -92,6 +97,9 @@ where
                 Tab::Ide => Tab::Settings,
                 Tab::Settings => Tab::Settings,
             };
+
+            state.selected_index = 0;
+            state.clamp_selection();
         }
 
         _ => {}

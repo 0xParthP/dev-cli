@@ -18,13 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Config::exists()` helper used by the startup flow to skip the wizard on
   subsequent runs.
 
-### Changed
-- Reorganized the top-level documentation pass around the real on-disk layout
-  (`lib.rs` exposes the library, `tests/` is the only home for tests,
-  `xtask/` is the developer entry point, etc.).
-- Updated every `docs/*.md` to reflect the current code (install command,
-  onboarding wizard, scanner integration, 80% coverage gate, branch naming,
-  `cargo xtask ci`).
+### Refactored & Fixed (Codebase Audit)
+- **TUI Pure View Architecture:** Removed disk I/O `Config::load()` fallback from `src/tui/widgets/recent.rs`, enforcing pure view rendering from `AppState`. Updated `tui_widgets.rs` tests to initialize `AppState` via `state.load_recent_projects()`.
+- **Cross-Platform Integration Testing:** Enabled `open_existing_project_with_test_executable` in `tests/cli_open.rs` and `launcher_accepts_all_supported_ides` in `tests/launcher.rs` across all platforms (removing unnecessary `#[cfg(unix)]` gates so Windows is thoroughly tested).
+- **Environment Isolation:** Added isolated temporary configuration directory (`DEVCLI_CONFIG_DIR`) and stdout assertion to `tests/cli_ide.rs`.
+- **Test Deduplication & Expansion:** Removed duplicate `move_down` test in `tests/tui_state.rs` and replaced it with a test for `Tab::Recent` tab navigation (`move_down_on_recent_tab_stops_at_end`). Fixed `tempfile::TempDir::into_path` deprecation in `tests/cli_open.rs`.
 
 ### Fixed
 - Branch-name pre-commit hook and `branch-name.yml` workflow now reject

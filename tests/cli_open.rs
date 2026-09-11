@@ -5,12 +5,9 @@ use predicates::prelude::*;
 use serial_test::serial;
 use tempfile::TempDir;
 
-#[cfg(unix)]
 use common::temp_project::TempProject;
-#[cfg(unix)]
 use std::{fs, io::Write};
 
-#[cfg(unix)]
 fn create_fake_executable() -> std::path::PathBuf {
     let dir = TempDir::new().unwrap();
     let dir_path = dir.keep();
@@ -26,11 +23,14 @@ fn create_fake_executable() -> std::path::PathBuf {
         writeln!(file, "#!/bin/sh").unwrap();
         writeln!(file, "exit 0").unwrap();
 
-        use std::os::unix::fs::PermissionsExt;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
 
-        let mut perms = file.metadata().unwrap().permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&path, perms).unwrap();
+            let mut perms = file.metadata().unwrap().permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&path, perms).unwrap();
+        }
     }
 
     drop(file);
@@ -82,8 +82,7 @@ fn project_list_runs() {
         .stdout(predicate::str::contains("Configured Project Roots"));
 }
 
-/// UNIX only test that creates a fake project and a fake executable to test the `dev open` command.
-#[cfg(unix)]
+/// Cross-platform test that creates a fake project and a fake executable to test the `dev open` command.
 #[test]
 #[serial]
 fn open_existing_project_with_test_executable() {

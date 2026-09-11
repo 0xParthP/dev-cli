@@ -123,23 +123,15 @@ fn project_list_with_no_git_repositories_prints_header_only() {
     let temp = TempProject::new("no-repositories");
     write_temp_config(&temp);
 
-    unsafe {
-        std::env::set_var("DEVCLI_CONFIG_DIR", temp.root().join("dev-cli"));
-        std::env::set_var("DEVCLI_SKIP_ONBOARDING", "1");
-    }
-
     Command::cargo_bin("dev")
         .unwrap()
+        .env("DEVCLI_CONFIG_DIR", temp.root().join("dev-cli"))
+        .env("DEVCLI_SKIP_ONBOARDING", "1")
         .args(["project", "list"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Configured Project Roots"))
         .stdout(predicate::str::contains("Discovered Git Repositories"));
-
-    unsafe {
-        std::env::remove_var("DEVCLI_SKIP_ONBOARDING");
-        std::env::remove_var("DEVCLI_CONFIG_DIR");
-    }
 }
 
 #[test]

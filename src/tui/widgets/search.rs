@@ -10,6 +10,7 @@ use ratatui::{
 
 use crate::tui::{state::AppState, theme};
 
+/// Render the widget onto the given frame and area.
 pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
     let text = if state.search_query.is_empty() {
         Line::from(vec![

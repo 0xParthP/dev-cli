@@ -5,11 +5,11 @@ use dev_cli::{
     models::ide::Ide,
     tui::{
         state::{AppState, Tab},
-        widgets::{footer, header, project_list, search, tabs},
+        widgets::{footer, header, placeholder, project_list, search, tabs},
     },
 };
 
-use dev_cli::models::project::Project;
+use common::factories::fake_project as project;
 use dev_cli::tui::widgets::recent;
 
 use dev_cli::{config::Config, models::recent_project::RecentProject};
@@ -22,16 +22,6 @@ use std::{
 
 mod common;
 use common::temp_config::with_temp_config;
-
-fn project(name: &str) -> Project {
-    let root = std::env::temp_dir();
-    let path = root.join(name);
-
-    // Ensure the fake project directory actually exists.
-    std::fs::create_dir_all(path.join(".git")).unwrap();
-
-    Project { name: name.into(), path: path.clone(), root, git_dir: path.join(".git") }
-}
 
 fn render_widget(widget: impl FnOnce(&mut ratatui::Frame), width: u16, height: u16) -> Buffer {
     let backend = TestBackend::new(width, height);
@@ -150,7 +140,7 @@ fn selected_project_is_highlighted() -> Result<()> {
 #[test]
 fn empty_search_state_renders_message() -> Result<()> {
     let mut state = AppState::new();
-    state.active_tab = Tab::Projects; // <-- Important
+    state.active_tab = Tab::Projects;
     state.projects = vec![project("cursor")];
     state.search_query = "xyz".into();
 
@@ -165,7 +155,7 @@ fn empty_search_state_renders_message() -> Result<()> {
         terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
 
     assert!(rendered.contains("No projects found"));
-    assert!(rendered.contains("Try another search."));
+    assert!(rendered.contains("Try another search"));
 
     Ok(())
 }
@@ -305,7 +295,7 @@ fn non_projects_tab_shows_placeholder() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     terminal.draw(|frame| {
-        project_list::render(frame, frame.area(), &state);
+        placeholder::render(frame, frame.area(), Tab::Ide);
     })?;
 
     let rendered: String =
@@ -351,7 +341,8 @@ fn recent_widget_renders_project_name() -> Result<()> {
 
         let backend = TestBackend::new(60, 10);
         let mut terminal = Terminal::new(backend)?;
-        let state = AppState::new();
+        let mut state = AppState::new();
+        state.load_recent_projects();
 
         terminal.draw(|frame| {
             recent::render(frame, frame.area(), &state);
@@ -384,7 +375,8 @@ fn recent_widget_renders_relative_timestamp() -> Result<()> {
 
         let backend = TestBackend::new(70, 10);
         let mut terminal = Terminal::new(backend)?;
-        let state = AppState::new();
+        let mut state = AppState::new();
+        state.load_recent_projects();
 
         terminal.draw(|frame| {
             recent::render(frame, frame.area(), &state);
@@ -438,11 +430,12 @@ fn recent_tab_renders_recent_widget() {
         .unwrap();
 
         let mut state = AppState::new();
+        state.load_recent_projects();
         state.active_tab = Tab::Recent;
 
         let buffer = render_widget(
             |frame| {
-                project_list::render(frame, ratatui::layout::Rect::new(0, 0, 60, 12), &state);
+                recent::render(frame, ratatui::layout::Rect::new(0, 0, 60, 12), &state);
             },
             60,
             12,

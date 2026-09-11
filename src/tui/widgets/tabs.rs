@@ -13,6 +13,7 @@ use crate::tui::{
     theme,
 };
 
+/// Render the widget onto the given frame and area.
 pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
     let titles = [
         Line::from(" Recent "),
