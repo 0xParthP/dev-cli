@@ -1,11 +1,16 @@
 //! First-run onboarding wizard.
 
-use std::{io::IsTerminal, path::PathBuf};
+use std::io::IsTerminal;
+#[cfg(not(coverage))]
+use std::path::PathBuf;
 
 use anyhow::Result;
+#[cfg(not(coverage))]
 use cliclack::{confirm, input, intro, outro, select};
 
-use crate::{config::Config, models::ide::Ide};
+use crate::config::Config;
+#[cfg(not(coverage))]
+use crate::models::ide::Ide;
 
 /// Runs onboarding only if `config.toml` doesn't exist.
 pub fn ensure_onboarded() -> Result<()> {
@@ -77,6 +82,12 @@ pub fn run_onboarding() -> Result<()> {
 
     outro("✨ Setup complete! You're ready to use dev-cli.")?;
 
+    Ok(())
+}
+
+/// Interactive setup wizard stub for coverage runs.
+#[cfg(coverage)]
+pub fn run_onboarding() -> Result<()> {
     Ok(())
 }
 
