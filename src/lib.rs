@@ -1,7 +1,4 @@
 //! Core library for dev-cli.
-//!
-//! This library exposes all functionality used by the `dev` binary and by
-//! integration tests in the `tests/` directory.
 
 pub mod cli;
 pub mod commands;

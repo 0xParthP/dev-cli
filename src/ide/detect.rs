@@ -46,7 +46,7 @@ pub fn detect_common_windows_locations_in(list: &mut Vec<InstalledIde>, home: &P
 
     // Cursor: Standard Windows installation path
     let cursor = home.join("AppData/Local/Programs/Cursor/Cursor.exe");
-    if cursor.exists() {
+    if cursor.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Cursor)) {
         list.push(InstalledIde::new(Ide::Cursor, "Cursor", cursor));
     }
 

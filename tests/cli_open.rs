@@ -6,37 +6,6 @@ use serial_test::serial;
 use tempfile::TempDir;
 
 use common::temp_project::TempProject;
-use std::{fs, io::Write};
-
-fn create_fake_executable() -> std::path::PathBuf {
-    let dir = TempDir::new().unwrap();
-    let dir_path = dir.keep();
-
-    let path = if cfg!(windows) { dir_path.join("fake.cmd") } else { dir_path.join("fake.sh") };
-
-    let mut file = fs::File::create(&path).unwrap();
-
-    if cfg!(windows) {
-        writeln!(file, "@echo off").unwrap();
-        writeln!(file, "exit /b 0").unwrap();
-    } else {
-        writeln!(file, "#!/bin/sh").unwrap();
-        writeln!(file, "exit 0").unwrap();
-
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-
-            let mut perms = file.metadata().unwrap().permissions();
-            perms.set_mode(0o755);
-            fs::set_permissions(&path, perms).unwrap();
-        }
-    }
-
-    drop(file);
-
-    path
-}
 
 fn dev_cmd_isolated() -> (Command, TempDir) {
     let tmp = TempDir::new().expect("create temp dir");
@@ -104,12 +73,40 @@ projects_root = ["{}"]
 
     std::fs::write(config_dir.join("config.toml"), config).unwrap();
 
-    let fake = create_fake_executable();
+    let bin_dir = temp.root().join("bin");
+    std::fs::create_dir_all(&bin_dir).unwrap();
+
+    #[cfg(windows)]
+    let exe_name = "cursor.exe";
+    #[cfg(not(windows))]
+    let exe_name = "cursor";
+
+    let exe_path = bin_dir.join(exe_name);
+    if cfg!(windows) {
+        let comspec =
+            std::env::var("COMSPEC").unwrap_or_else(|_| r"C:\Windows\System32\cmd.exe".to_string());
+        std::fs::copy(comspec, &exe_path).unwrap();
+    } else {
+        std::fs::write(&exe_path, "#!/bin/sh\nexit 0\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&exe_path).unwrap().permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&exe_path, perms).unwrap();
+        }
+    }
+
+    let path_sep = if cfg!(windows) { ";" } else { ":" };
+    let path_var = match std::env::var("PATH") {
+        Ok(p) => format!("{}{}{}", bin_dir.display(), path_sep, p),
+        Err(_) => bin_dir.display().to_string(),
+    };
 
     Command::cargo_bin("dev")
         .unwrap()
         .env("DEVCLI_SKIP_ONBOARDING", "1")
-        .env("DEVCLI_TEST_EXECUTABLE", &fake)
+        .env("PATH", path_var)
         .env("DEVCLI_CONFIG_DIR", &config_dir)
         .args(["open", "MyProject"])
         .assert()

@@ -3,7 +3,6 @@ use dev_cli::config::Config;
 use dev_cli::models::ide::Ide;
 use dev_cli::onboarding::{default_projects_dir, ensure_onboarded};
 use serial_test::serial;
-use std::io::IsTerminal;
 use std::path::PathBuf;
 use temp_env::with_var;
 use tempfile::TempDir;
@@ -50,20 +49,20 @@ fn ensure_onboarded_returns_ok_when_config_exists() {
 #[serial]
 fn ensure_onboarded_returns_ok_when_config_missing_but_no_terminal() {
     with_temp_config(|| {
-        let path = Config::path().unwrap();
+        with_var("DEVCLI_SKIP_ONBOARDING", Some("1"), || {
+            let path = Config::path().unwrap();
 
-        if path.exists() {
-            std::fs::remove_file(&path).unwrap();
-        }
+            if path.exists() {
+                std::fs::remove_file(&path).unwrap();
+            }
 
-        assert!(!Config::exists().unwrap());
+            assert!(!Config::exists().unwrap());
 
-        if !std::io::stdin().is_terminal() || !std::io::stdout().is_terminal() {
             assert!(ensure_onboarded().is_ok());
 
-            // Wizard must not create a config when not attached to a TTY.
-            assert!(!Config::exists().unwrap(), "non-terminal run must not create config");
-        }
+            // Wizard must not create a config when not attached to a TTY or when skipped.
+            assert!(!Config::exists().unwrap(), "non-terminal/skipped run must not create config");
+        });
     });
 }
 
@@ -99,7 +98,18 @@ fn onboarding_module_exposes_expected_public_api() {
     use dev_cli::onboarding;
 
     let _: fn() -> anyhow::Result<()> = onboarding::ensure_onboarded;
+    let _: fn() -> anyhow::Result<()> = onboarding::run_onboarding;
     let _: fn() -> String = onboarding::default_projects_dir;
+}
+
+#[test]
+#[serial]
+fn run_onboarding_returns_ok_in_non_interactive_mode() {
+    with_temp_config(|| {
+        with_var("DEVCLI_SKIP_ONBOARDING", Some("1"), || {
+            assert!(dev_cli::onboarding::run_onboarding().is_ok());
+        });
+    });
 }
 
 #[test]

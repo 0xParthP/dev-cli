@@ -71,17 +71,58 @@ fn project_open_missing_project_returns_error() {
 }
 
 fn run_open_test(ide: &str) {
-    let name = format!("open-{ide}");
-    let temp = TempProject::new(&name);
+    let temp = TempProject::new(&format!("open-{}", ide));
 
     temp.create_git_repo("demo");
     write_temp_config(&temp);
+
+    let bin_dir = temp.root().join("bin");
+    std::fs::create_dir_all(&bin_dir).ok();
+
+    #[cfg(windows)]
+    let exe = match ide {
+        "cursor" => "cursor.exe",
+        "terminal" => "wt.exe",
+        "claude" => "claude.exe",
+        _ => "code.exe",
+    };
+    #[cfg(not(windows))]
+    let exe = match ide {
+        "cursor" => "cursor",
+        "terminal" => "wt",
+        "claude" => "claude",
+        _ => "code",
+    };
+
+    let exe_path = bin_dir.join(exe);
+    if cfg!(windows) {
+        let comspec =
+            std::env::var("COMSPEC").unwrap_or_else(|_| r"C:\Windows\System32\cmd.exe".to_string());
+        std::fs::copy(comspec, &exe_path).ok();
+    } else {
+        std::fs::write(&exe_path, "#!/bin/sh\nexit 0\n").ok();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Ok(meta) = std::fs::metadata(&exe_path) {
+                let mut perms = meta.permissions();
+                perms.set_mode(0o755);
+                let _ = std::fs::set_permissions(&exe_path, perms);
+            }
+        }
+    }
+
+    let path_sep = if cfg!(windows) { ";" } else { ":" };
+    let path_var = match std::env::var("PATH") {
+        Ok(p) => format!("{}{}{}", bin_dir.display(), path_sep, p),
+        Err(_) => bin_dir.display().to_string(),
+    };
 
     Command::cargo_bin("dev")
         .unwrap()
         .env("DEVCLI_CONFIG_DIR", temp.root().join("dev-cli"))
         .env("DEVCLI_SKIP_ONBOARDING", "1")
-        .env("DEVCLI_TEST_EXECUTABLE", if cfg!(windows) { "cmd" } else { "true" })
+        .env("PATH", path_var)
         .args(["project", "open", "demo", "--ide", ide])
         .assert()
         .success();
@@ -108,11 +149,43 @@ fn open_shortcut_command_runs() {
     temp.create_git_repo("demo");
     write_temp_config(&temp);
 
+    let bin_dir = temp.root().join("bin");
+    std::fs::create_dir_all(&bin_dir).ok();
+
+    #[cfg(windows)]
+    let exe = "cursor.exe";
+    #[cfg(not(windows))]
+    let exe = "cursor";
+
+    let exe_path = bin_dir.join(exe);
+    if cfg!(windows) {
+        let comspec =
+            std::env::var("COMSPEC").unwrap_or_else(|_| r"C:\Windows\System32\cmd.exe".to_string());
+        std::fs::copy(comspec, &exe_path).ok();
+    } else {
+        std::fs::write(&exe_path, "#!/bin/sh\nexit 0\n").ok();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Ok(meta) = std::fs::metadata(&exe_path) {
+                let mut perms = meta.permissions();
+                perms.set_mode(0o755);
+                let _ = std::fs::set_permissions(&exe_path, perms);
+            }
+        }
+    }
+
+    let path_sep = if cfg!(windows) { ";" } else { ":" };
+    let path_var = match std::env::var("PATH") {
+        Ok(p) => format!("{}{}{}", bin_dir.display(), path_sep, p),
+        Err(_) => bin_dir.display().to_string(),
+    };
+
     Command::cargo_bin("dev")
         .unwrap()
         .env("DEVCLI_CONFIG_DIR", temp.root().join("dev-cli"))
         .env("DEVCLI_SKIP_ONBOARDING", "1")
-        .env("DEVCLI_TEST_EXECUTABLE", if cfg!(windows) { "cmd" } else { "true" })
+        .env("PATH", path_var)
         .args(["open", "demo"])
         .assert()
         .success();

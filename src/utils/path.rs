@@ -3,8 +3,6 @@
 use std::path::{Path, PathBuf};
 
 /// Convert Windows canonical paths (`\\?\C:\...`) into human-readable paths.
-///
-/// On non-Windows platforms this returns the original path unchanged.
 pub fn display_path(path: &Path) -> String {
     #[cfg(windows)]
     {
