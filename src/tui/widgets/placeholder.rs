@@ -1,14 +1,12 @@
 //! Placeholder widget for unimplemented tabs.
 
-use ratatui::{
-    Frame,
-    layout::{Alignment, Rect},
-    style::{Modifier, Style},
-    text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
-};
+use ratatui::{Frame, layout::Rect};
 
-use crate::tui::{state::Tab, theme};
+use crate::tui::{
+    state::Tab,
+    theme,
+    widgets::list::{Notice, render_centered_notice},
+};
 
 /// Render a coming soon placeholder for unimplemented tabs.
 pub fn render(frame: &mut Frame, area: Rect, tab: Tab) {
@@ -18,27 +16,15 @@ pub fn render(frame: &mut Frame, area: Rect, tab: Tab) {
         _ => " Coming Soon ",
     };
 
-    let placeholder = Paragraph::new(vec![
-        Line::from(""),
-        Line::from(Span::styled("🚧", Style::default().fg(theme::WARNING))),
-        Line::from(""),
-        Line::from(Span::styled(
-            "Coming Soon",
-            Style::default().fg(theme::TEXT).add_modifier(Modifier::BOLD),
-        )),
-        Line::from(""),
-        Line::from(Span::styled(
-            "This tab will be implemented in a later milestone.",
-            Style::default().fg(theme::MUTED),
-        )),
-    ])
-    .alignment(Alignment::Center)
-    .block(
-        Block::default()
-            .title(title)
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(theme::BORDER)),
+    render_centered_notice(
+        frame,
+        area,
+        Notice {
+            title,
+            icon: "🚧",
+            icon_color: theme::WARNING,
+            heading: "Coming Soon",
+            subtext: "This tab will be implemented in a later milestone.",
+        },
     );
-
-    frame.render_widget(placeholder, area);
 }

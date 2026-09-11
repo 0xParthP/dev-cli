@@ -2,14 +2,18 @@
 
 use ratatui::{
     Frame,
-    layout::{Alignment, Rect},
+    layout::Rect,
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, ListItem, Paragraph},
+    widgets::ListItem,
 };
 
 use crate::{
-    tui::{state::AppState, theme, widgets::list::render_list},
+    tui::{
+        state::AppState,
+        theme,
+        widgets::list::{Notice, render_centered_notice, render_list},
+    },
     utils::path::display_path,
 };
 
@@ -20,26 +24,17 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
     let title = format!(" Projects ({}) ", projects.len());
 
     if projects.is_empty() {
-        let empty = Paragraph::new(vec![
-            Line::from(""),
-            Line::from(Span::styled("📂", Style::default().fg(theme::MUTED))),
-            Line::from(""),
-            Line::from(Span::styled(
-                "No projects found",
-                Style::default().fg(theme::TEXT).add_modifier(Modifier::BOLD),
-            )),
-            Line::from(""),
-            Line::from(Span::styled("Try another search.", Style::default().fg(theme::MUTED))),
-        ])
-        .alignment(Alignment::Center)
-        .block(
-            Block::default()
-                .title(title)
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(theme::BORDER)),
+        render_centered_notice(
+            frame,
+            area,
+            Notice {
+                title: &title,
+                icon: "📂",
+                icon_color: theme::MUTED,
+                heading: "No projects found",
+                subtext: "Try another search.",
+            },
         );
-
-        frame.render_widget(empty, area);
         return;
     }
 

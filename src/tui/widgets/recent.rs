@@ -4,16 +4,20 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use ratatui::{
     Frame,
-    layout::{Alignment, Rect},
+    layout::Rect,
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, ListItem, Paragraph},
+    widgets::ListItem,
 };
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
     models::recent_project::RecentProject,
-    tui::{state::AppState, theme, widgets::list::render_list},
+    tui::{
+        state::AppState,
+        theme,
+        widgets::list::{Notice, render_centered_notice, render_list},
+    },
     utils::path::display_path,
 };
 
@@ -38,29 +42,17 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
     let title = format!(" Recent Projects ({}) ", recent_projects.len());
 
     if recent_projects.is_empty() {
-        let empty = Paragraph::new(vec![
-            Line::from(""),
-            Line::from(Span::styled("🕘", Style::default().fg(theme::MUTED))),
-            Line::from(""),
-            Line::from(Span::styled(
-                "No recent projects",
-                Style::default().fg(theme::TEXT).add_modifier(Modifier::BOLD),
-            )),
-            Line::from(""),
-            Line::from(Span::styled(
-                "Open a project from the Projects tab.",
-                Style::default().fg(theme::MUTED),
-            )),
-        ])
-        .alignment(Alignment::Center)
-        .block(
-            Block::default()
-                .title(title)
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(theme::BORDER)),
+        render_centered_notice(
+            frame,
+            area,
+            Notice {
+                title: &title,
+                icon: "🕘",
+                icon_color: theme::MUTED,
+                heading: "No recent projects",
+                subtext: "Open a project from the Projects tab.",
+            },
         );
-
-        frame.render_widget(empty, area);
         return;
     }
 
