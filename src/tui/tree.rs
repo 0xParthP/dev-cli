@@ -22,6 +22,18 @@ impl TreeNode {
             TreeNode::Project(p) => &p.path,
         }
     }
+
+    /// Returns true if this node or any child node matches the query string.
+    pub fn matches_query(&self, query: &str) -> bool {
+        if query.is_empty() {
+            return true;
+        }
+        let q = query.to_lowercase();
+        match self {
+            TreeNode::Folder { children, .. } => children.iter().any(|c| c.matches_query(&q)),
+            TreeNode::Project(p) => p.name.to_lowercase().contains(&q),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -130,24 +142,20 @@ pub fn flatten_filtered_tree<'a>(
                     project: None,
                 });
 
-                if *is_expanded {
-                    let child_has_match = flatten_filtered_tree(children, query, depth + 1, out);
-                    if child_has_match {
-                        has_matching_child = true;
-                    } else {
-                        out.truncate(start_idx);
-                    }
+                let has_match = if *is_expanded {
+                    flatten_filtered_tree(children, query, depth + 1, out)
                 } else {
-                    let has_match = has_matching_project(children, query);
-                    if has_match {
-                        has_matching_child = true;
-                    } else {
-                        out.truncate(start_idx);
-                    }
+                    children.iter().any(|c| c.matches_query(query))
+                };
+
+                if has_match {
+                    has_matching_child = true;
+                } else {
+                    out.truncate(start_idx);
                 }
             }
             TreeNode::Project(p) => {
-                if p.name.to_lowercase().contains(query) {
+                if query.is_empty() || p.name.to_lowercase().contains(query) {
                     has_matching_child = true;
                     out.push(DisplayNode {
                         depth,
@@ -163,23 +171,4 @@ pub fn flatten_filtered_tree<'a>(
     }
 
     has_matching_child
-}
-
-/// Returns true if any project within nodes matches the search query.
-pub fn has_matching_project(nodes: &[TreeNode], query: &str) -> bool {
-    for node in nodes {
-        match node {
-            TreeNode::Folder { children, .. } => {
-                if has_matching_project(children, query) {
-                    return true;
-                }
-            }
-            TreeNode::Project(p) => {
-                if p.name.to_lowercase().contains(query) {
-                    return true;
-                }
-            }
-        }
-    }
-    false
 }
