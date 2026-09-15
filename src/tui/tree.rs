@@ -105,33 +105,7 @@ fn build_subtree(base_path: &Path, projects: Vec<Project>) -> Vec<TreeNode> {
 
 /// Flattens a tree into a list of DisplayNodes, respecting expansion state.
 pub fn flatten_tree<'a>(nodes: &'a [TreeNode], depth: usize, out: &mut Vec<DisplayNode<'a>>) {
-    for node in nodes {
-        match node {
-            TreeNode::Folder { name, path, is_expanded, children } => {
-                out.push(DisplayNode {
-                    depth,
-                    is_folder: true,
-                    is_expanded: *is_expanded,
-                    name,
-                    path,
-                    project: None,
-                });
-                if *is_expanded {
-                    flatten_tree(children, depth + 1, out);
-                }
-            }
-            TreeNode::Project(p) => {
-                out.push(DisplayNode {
-                    depth,
-                    is_folder: false,
-                    is_expanded: false,
-                    name: &p.name,
-                    path: &p.path,
-                    project: Some(p),
-                });
-            }
-        }
-    }
+    flatten_filtered_tree(nodes, "", depth, out);
 }
 
 /// Flattens a tree into a list of DisplayNodes, including only projects matching query (and their parent folders).
