@@ -60,9 +60,15 @@ where
 
         KeyCode::Enter => match state.active_tab {
             Tab::Projects => {
-                if let Some(project) = state.selected_project()
-                    && launcher(project).is_ok()
-                {
+                let is_folder = state
+                    .visible_items()
+                    .get(state.selected_index)
+                    .map(|n| n.is_folder)
+                    .unwrap_or(false);
+
+                if is_folder {
+                    state.toggle_selected();
+                } else if state.selected_project().is_some_and(|p| launcher(p).is_ok()) {
                     state.quit();
                 }
             }

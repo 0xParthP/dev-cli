@@ -40,7 +40,7 @@ where
 {
     let mut state = AppState::new();
 
-    state.projects = super::data::load_projects()?;
+    state.set_projects(super::data::load_projects()?);
     state.load_recent_projects();
 
     // Runtime starts on Recent.

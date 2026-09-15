@@ -20,10 +20,11 @@ use crate::{
 /// Render the widget onto the given frame and area.
 pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
     // Route to the correct tab.
-    let projects = state.filtered_projects();
-    let title = format!(" Projects ({}) ", projects.len());
+    let items = state.visible_items();
+    let count = state.filtered_projects().len();
+    let title = format!(" Projects ({count}) ");
 
-    if projects.is_empty() {
+    if items.is_empty() {
         render_centered_notice(
             frame,
             area,
@@ -38,25 +39,36 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
         return;
     }
 
-    let items: Vec<ListItem> = projects
+    let list_items: Vec<ListItem> = items
         .iter()
-        .map(|project| {
+        .map(|node| {
+            let indent = "  ".repeat(node.depth);
+
+            let (icon, icon_color, path_padding) = if node.is_folder {
+                let icon_str = if node.is_expanded { "[-] 📂 " } else { "[+] 📁 " };
+                (icon_str, theme::WARNING, "       ")
+            } else {
+                ("📦 ", theme::INFO, "   ")
+            };
+
             ListItem::new(vec![
                 Line::from(vec![
-                    Span::styled("📁 ", Style::default().fg(theme::WARNING)),
+                    Span::raw(indent.clone()),
+                    Span::styled(icon, Style::default().fg(icon_color)),
                     Span::styled(
-                        &project.name,
+                        node.name,
                         Style::default().fg(theme::TEXT).add_modifier(Modifier::BOLD),
                     ),
                 ]),
                 Line::from(vec![
-                    Span::raw("   "),
-                    Span::styled(display_path(&project.path), Style::default().fg(theme::MUTED)),
+                    Span::raw(indent),
+                    Span::raw(path_padding),
+                    Span::styled(display_path(node.path), Style::default().fg(theme::MUTED)),
                 ]),
                 Line::default(),
             ])
         })
         .collect();
 
-    render_list(frame, area, title, items, Some(state.selected_index));
+    render_list(frame, area, title, list_items, Some(state.selected_index));
 }

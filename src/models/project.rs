@@ -20,9 +20,13 @@ pub struct Project {
     pub git_dir: PathBuf,
 }
 
+use crate::utils::path::normalize_path;
+
 impl Project {
     /// Construct a project from discovered filesystem paths.
     pub fn new(path: PathBuf, root: PathBuf) -> Self {
+        let path = normalize_path(path);
+        let root = normalize_path(root);
         let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
 
         let git_dir = path.join(".git");

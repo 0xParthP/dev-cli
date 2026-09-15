@@ -23,49 +23,49 @@ fn quit_sets_should_quit() {
 }
 
 #[test]
-fn filtered_projects_returns_all_when_query_empty() {
+fn visible_items_returns_all_when_query_empty() {
     let mut state = AppState::new();
 
-    state.projects = vec![project("cursor"), project("weather"), project("notes")];
+    state.set_projects(vec![project("cursor"), project("weather"), project("notes")]);
 
-    let filtered = state.filtered_projects();
+    let items = state.visible_items();
 
-    assert_eq!(filtered.len(), 3);
+    assert_eq!(items.len(), 4);
 }
 
 #[test]
-fn filtered_projects_filters_case_insensitively() {
+fn visible_items_filters_case_insensitively() {
     let mut state = AppState::new();
 
-    state.projects = vec![project("Cursor"), project("cursor-theme"), project("weather")];
+    state.set_projects(vec![project("Cursor"), project("cursor-theme"), project("weather")]);
 
     state.search_query = "CURSOR".into();
 
-    let filtered = state.filtered_projects();
+    let items = state.visible_items();
 
-    assert_eq!(filtered.len(), 2);
-    assert_eq!(filtered[0].name, "Cursor");
-    assert_eq!(filtered[1].name, "cursor-theme");
+    assert_eq!(items.len(), 3);
+    assert_eq!(items[1].name, "Cursor");
+    assert_eq!(items[2].name, "cursor-theme");
 }
 
 #[test]
 fn move_down_stops_at_last_project() {
     let mut state = AppState::new();
 
-    state.projects = vec![project("a"), project("b")];
+    state.set_projects(vec![project("a"), project("b")]);
 
     state.move_down();
     state.move_down();
     state.move_down();
 
-    assert_eq!(state.selected_index, 1);
+    assert_eq!(state.selected_index, 2);
 }
 
 #[test]
 fn move_up_stops_at_zero() {
     let mut state = AppState::new();
 
-    state.projects = vec![project("a"), project("b")];
+    state.set_projects(vec![project("a"), project("b")]);
     state.selected_index = 1;
 
     state.move_up();
@@ -103,7 +103,7 @@ fn pop_char_removes_last_character() {
 fn clamp_selection_resets_when_filtered_list_is_empty() {
     let mut state = AppState::new();
 
-    state.projects = vec![project("cursor")];
+    state.set_projects(vec![project("cursor")]);
     state.search_query = "weather".into();
     state.selected_index = 5;
 
@@ -116,26 +116,26 @@ fn clamp_selection_resets_when_filtered_list_is_empty() {
 fn clamp_selection_moves_selection_to_last_item() {
     let mut state = AppState::new();
 
-    state.projects = vec![project("cursor"), project("weather"), project("notes")];
+    state.set_projects(vec![project("cursor"), project("weather"), project("notes")]);
 
     state.selected_index = 10;
 
     state.clamp_selection();
 
-    assert_eq!(state.selected_index, 2);
+    assert_eq!(state.selected_index, 3);
 }
 
 #[test]
 fn search_filters_projects() {
     let mut state = AppState::new();
 
-    state.projects = vec![project("cursor"), project("weather-app"), project("cursor-theme")];
+    state.set_projects(vec![project("cursor"), project("weather-app"), project("cursor-theme")]);
 
     state.search_query = "cursor".into();
 
-    let filtered = state.filtered_projects();
+    let items = state.visible_items();
 
-    assert_eq!(filtered.len(), 2);
+    assert_eq!(items.len(), 3);
 }
 
 #[test]
