@@ -44,6 +44,9 @@ where
 {
     match key.code {
         KeyCode::Esc => state.quit(),
+        KeyCode::F(1) => {
+            let _ = state.refresh();
+        }
 
         KeyCode::Down => state.move_down(),
         KeyCode::Up => state.move_up(),

@@ -369,3 +369,10 @@ fn enter_key_on_recent_tab_reupdates_recent_project_in_config() {
         assert_eq!(updated_config.recent_projects[0].name, "target_app");
     });
 }
+
+#[test]
+fn f1_key_triggers_refresh() {
+    let mut state = AppState::new();
+    handle_key(KeyEvent::new(KeyCode::F(1), KeyModifiers::NONE), &mut state);
+    assert!(!state.should_quit);
+}
