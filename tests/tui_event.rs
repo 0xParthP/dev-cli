@@ -99,7 +99,7 @@ fn other_keys_do_nothing() {
 #[test]
 fn down_key_moves_selection() {
     let mut state = AppState::new();
-    state.projects = vec![project("alpha"), project("beta")];
+    state.set_projects(vec![project("alpha"), project("beta")]);
 
     handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE), &mut state);
 
@@ -109,7 +109,7 @@ fn down_key_moves_selection() {
 #[test]
 fn up_key_moves_selection() {
     let mut state = AppState::new();
-    state.projects = vec![project("alpha"), project("beta")];
+    state.set_projects(vec![project("alpha"), project("beta")]);
     state.selected_index = 1;
 
     handle_key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE), &mut state);
@@ -212,11 +212,8 @@ fn open_project_returns_launcher_error() -> Result<()> {
 
 #[test]
 fn enter_does_nothing_when_filtered_list_is_empty() {
-    let mut state = AppState {
-        projects: vec![project("cursor")],
-        search_query: "weather".into(),
-        ..Default::default()
-    };
+    let mut state = AppState { search_query: "weather".into(), ..Default::default() };
+    state.set_projects(vec![project("cursor")]);
 
     handle_key_with_launcher(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE), &mut state, |_| {
         panic!("launcher should not be called");
@@ -227,7 +224,8 @@ fn enter_does_nothing_when_filtered_list_is_empty() {
 
 #[test]
 fn enter_does_not_quit_when_open_project_fails() {
-    let mut state = AppState { projects: vec![project("demo")], ..Default::default() };
+    let mut state = AppState::default();
+    state.set_projects(vec![project("demo")]);
 
     handle_key_with_launcher(
         KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),

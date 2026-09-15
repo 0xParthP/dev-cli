@@ -86,7 +86,7 @@ fn footer_renders() -> Result<()> {
 fn search_works() -> Result<()> {
     let mut state = AppState::new();
 
-    state.projects = vec![project("cursor"), project("weather-app"), project("notes")];
+    state.set_projects(vec![project("cursor"), project("weather-app"), project("notes")]);
 
     state.push_char('c');
     state.push_char('u');
@@ -106,9 +106,9 @@ fn search_works() -> Result<()> {
 
     assert!(rendered.contains("cur"));
 
-    let filtered = state.filtered_projects();
-    assert_eq!(filtered.len(), 1);
-    assert_eq!(filtered[0].name, "cursor");
+    let items = state.visible_items();
+    assert_eq!(items.len(), 2);
+    assert_eq!(items[1].name, "cursor");
 
     Ok(())
 }
@@ -118,7 +118,7 @@ fn selected_project_is_highlighted() -> Result<()> {
     let mut state = AppState::new();
     state.active_tab = Tab::Projects; // <-- Add this
 
-    state.projects = vec![project("alpha"), project("beta"), project("gamma")];
+    state.set_projects(vec![project("alpha"), project("beta"), project("gamma")]);
 
     state.move_down();
 
@@ -141,7 +141,7 @@ fn selected_project_is_highlighted() -> Result<()> {
 fn empty_search_state_renders_message() -> Result<()> {
     let mut state = AppState::new();
     state.active_tab = Tab::Projects;
-    state.projects = vec![project("cursor")];
+    state.set_projects(vec![project("cursor")]);
     state.search_query = "xyz".into();
 
     let backend = TestBackend::new(60, 10);

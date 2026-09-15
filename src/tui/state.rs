@@ -3,6 +3,7 @@
 use crate::{
     config::Config,
     models::{project::Project, recent_project::RecentProject},
+    tui::tree::{DisplayNode, TreeNode, build_project_tree, flatten_filtered_tree, flatten_tree},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -19,6 +20,9 @@ pub enum Tab {
 pub struct AppState {
     /// All discovered projects.
     pub projects: Vec<Project>,
+
+    /// The structured tree of projects.
+    pub project_tree: Vec<TreeNode>,
 
     /// Recently opened projects.
     pub recent_projects: Vec<RecentProject>,
@@ -40,6 +44,7 @@ impl Default for AppState {
     fn default() -> Self {
         Self {
             projects: Vec::new(),
+            project_tree: Vec::new(),
             recent_projects: Vec::new(),
             search_query: String::new(),
             selected_index: 0,
@@ -54,6 +59,11 @@ impl AppState {
     /// The dashboard opens on the Recent tab.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn set_projects(&mut self, projects: Vec<Project>) {
+        self.projects = projects.clone();
+        self.project_tree = build_project_tree(projects);
     }
 
     /// Load recent projects from the user's configuration.
@@ -79,9 +89,46 @@ impl AppState {
             .collect()
     }
 
+    pub fn visible_items(&self) -> Vec<DisplayNode<'_>> {
+        let mut out = Vec::new();
+        if self.search_query.is_empty() {
+            flatten_tree(&self.project_tree, 0, &mut out);
+        } else {
+            let query = self.search_query.to_lowercase();
+            flatten_filtered_tree(&self.project_tree, &query, 0, &mut out);
+        }
+        out
+    }
+
+    pub fn toggle_selected(&mut self) {
+        if self.active_tab != Tab::Projects {
+            return;
+        }
+
+        if let Some(node) = self.visible_items().get(self.selected_index).filter(|n| n.is_folder) {
+            let path = node.path.to_path_buf();
+            Self::toggle_node(&mut self.project_tree, &path);
+        }
+    }
+
+    fn toggle_node(nodes: &mut [TreeNode], target: &std::path::Path) -> bool {
+        for node in nodes {
+            if let TreeNode::Folder { path, is_expanded, children, .. } = node {
+                if path == target {
+                    *is_expanded = !*is_expanded;
+                    return true;
+                }
+                if Self::toggle_node(children, target) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     pub fn move_down(&mut self) {
         let len = match self.active_tab {
-            Tab::Projects => self.filtered_projects().len(),
+            Tab::Projects => self.visible_items().len(),
             Tab::Recent => self.recent_projects.len(),
             _ => 0,
         };
@@ -114,7 +161,7 @@ impl AppState {
 
     pub fn clamp_selection(&mut self) {
         let len = match self.active_tab {
-            Tab::Projects => self.filtered_projects().len(),
+            Tab::Projects => self.visible_items().len(),
             Tab::Recent => self.recent_projects.len(),
             _ => 0,
         };
@@ -127,7 +174,7 @@ impl AppState {
     }
 
     pub fn selected_project(&self) -> Option<&Project> {
-        self.filtered_projects().get(self.selected_index).copied()
+        self.visible_items().get(self.selected_index).and_then(|node| node.project)
     }
 
     pub fn selected_recent_project(&self) -> Option<&RecentProject> {
