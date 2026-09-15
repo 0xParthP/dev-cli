@@ -44,42 +44,29 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
         .map(|node| {
             let indent = "  ".repeat(node.depth);
 
-            if node.is_folder {
-                let icon = if node.is_expanded { "[-] 📂 " } else { "[+] 📁 " };
-                ListItem::new(vec![
-                    Line::from(vec![
-                        Span::raw(indent.clone()),
-                        Span::styled(icon, Style::default().fg(theme::WARNING)),
-                        Span::styled(
-                            node.name,
-                            Style::default().fg(theme::TEXT).add_modifier(Modifier::BOLD),
-                        ),
-                    ]),
-                    Line::from(vec![
-                        Span::raw(indent),
-                        Span::raw("       "),
-                        Span::styled(display_path(node.path), Style::default().fg(theme::MUTED)),
-                    ]),
-                    Line::default(),
-                ])
+            let (icon, icon_color, path_padding) = if node.is_folder {
+                let icon_str = if node.is_expanded { "[-] 📂 " } else { "[+] 📁 " };
+                (icon_str, theme::WARNING, "       ")
             } else {
-                ListItem::new(vec![
-                    Line::from(vec![
-                        Span::raw(indent.clone()),
-                        Span::styled("📦 ", Style::default().fg(theme::INFO)),
-                        Span::styled(
-                            node.name,
-                            Style::default().fg(theme::TEXT).add_modifier(Modifier::BOLD),
-                        ),
-                    ]),
-                    Line::from(vec![
-                        Span::raw(indent),
-                        Span::raw("   "),
-                        Span::styled(display_path(node.path), Style::default().fg(theme::MUTED)),
-                    ]),
-                    Line::default(),
-                ])
-            }
+                ("📦 ", theme::INFO, "   ")
+            };
+
+            ListItem::new(vec![
+                Line::from(vec![
+                    Span::raw(indent.clone()),
+                    Span::styled(icon, Style::default().fg(icon_color)),
+                    Span::styled(
+                        node.name,
+                        Style::default().fg(theme::TEXT).add_modifier(Modifier::BOLD),
+                    ),
+                ]),
+                Line::from(vec![
+                    Span::raw(indent),
+                    Span::raw(path_padding),
+                    Span::styled(display_path(node.path), Style::default().fg(theme::MUTED)),
+                ]),
+                Line::default(),
+            ])
         })
         .collect();
 
