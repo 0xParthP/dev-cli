@@ -170,3 +170,11 @@ fn typing_resets_selection() {
     assert_eq!(state.selected_index, 0);
     assert_eq!(state.search_query, "a");
 }
+
+#[test]
+fn refresh_reloads_projects_and_recents() {
+    let mut state = AppState::new();
+    state.selected_index = 100;
+    assert!(state.refresh().is_ok());
+    assert!(state.selected_index < state.visible_items().len().max(1));
+}

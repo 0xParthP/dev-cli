@@ -72,6 +72,15 @@ impl AppState {
             Config::load().map(|config| config.recent_projects).unwrap_or_default();
     }
 
+    /// Rescan projects from disk, reload recent history, and clamp current selection.
+    pub fn refresh(&mut self) -> anyhow::Result<()> {
+        let projects = crate::tui::data::load_projects()?;
+        self.set_projects(projects);
+        self.load_recent_projects();
+        self.clamp_selection();
+        Ok(())
+    }
+
     pub fn quit(&mut self) {
         self.should_quit = true;
     }

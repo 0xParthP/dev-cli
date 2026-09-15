@@ -281,6 +281,8 @@ fn footer_contains_all_shortcuts() -> Result<()> {
     assert!(rendered.contains("Enter"));
     assert!(rendered.contains("Navigate"));
     assert!(rendered.contains("Search"));
+    assert!(rendered.contains("F1"));
+    assert!(rendered.contains("Refresh"));
     assert!(rendered.contains("Quit"));
 
     Ok(())
