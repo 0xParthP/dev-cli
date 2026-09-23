@@ -330,6 +330,7 @@ fn enter_key_on_recent_tab_launches_project() {
         name: "recent_app".into(),
         path: std::path::PathBuf::from("/tmp/recent_app"),
         last_opened: 100,
+        ide: None,
     }];
 
     let launched = std::sync::atomic::AtomicBool::new(false);
@@ -356,6 +357,7 @@ fn enter_key_on_recent_tab_does_not_quit_on_error() {
         name: "recent_app".into(),
         path: std::path::PathBuf::from("/tmp/recent_app"),
         last_opened: 100,
+        ide: None,
     }];
 
     handle_key_with_launcher(

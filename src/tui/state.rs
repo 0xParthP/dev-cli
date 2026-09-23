@@ -125,6 +125,20 @@ impl AppState {
     /// Get the target IDE for a project path (override or default).
     pub fn get_project_ide(&self, path: &std::path::Path) -> Ide {
         let ide = self.ide_overrides.get(path).copied().unwrap_or(self.default_ide);
+        self.ensure_installed_ide(ide)
+    }
+
+    /// Get the target IDE for a recent project (override, recent default, or config default).
+    pub fn get_recent_project_ide(&self, recent: &RecentProject) -> Ide {
+        let ide = if let Some(&override_ide) = self.ide_overrides.get(&recent.path) {
+            override_ide
+        } else {
+            recent.ide.unwrap_or(self.default_ide)
+        };
+        self.ensure_installed_ide(ide)
+    }
+
+    fn ensure_installed_ide(&self, ide: Ide) -> Ide {
         if !self.installed_ides.is_empty() && !self.installed_ides.contains(&ide) {
             self.installed_ides[0]
         } else {
@@ -132,20 +146,30 @@ impl AppState {
         }
     }
 
-    /// Cycle through available installed IDEs for the currently selected project.
+    /// Cycle through available installed IDEs for the currently selected project (Projects or Recent tab).
     pub fn cycle_selected_ide(&mut self) {
-        if self.active_tab != Tab::Projects || self.installed_ides.is_empty() {
+        if self.installed_ides.is_empty() {
             return;
         }
 
-        if let Some(project) = self.selected_project() {
-            let current_ide = self.get_project_ide(&project.path);
-            let next_ide = match self.installed_ides.iter().position(|&i| i == current_ide) {
-                Some(idx) => self.installed_ides[(idx + 1) % self.installed_ides.len()],
-                None => self.installed_ides[0],
-            };
-            self.ide_overrides.insert(project.path.clone(), next_ide);
-        }
+        let (path, current_ide) = match self.active_tab {
+            Tab::Projects => {
+                let Some(project) = self.selected_project() else { return };
+                (project.path.clone(), self.get_project_ide(&project.path))
+            }
+            Tab::Recent => {
+                let Some(recent) = self.selected_recent_project() else { return };
+                (recent.path.clone(), self.get_recent_project_ide(recent))
+            }
+            _ => return,
+        };
+
+        let next_ide = match self.installed_ides.iter().position(|&i| i == current_ide) {
+            Some(idx) => self.installed_ides[(idx + 1) % self.installed_ides.len()],
+            None => self.installed_ides[0],
+        };
+
+        self.ide_overrides.insert(path, next_ide);
     }
 
     pub fn filtered_projects(&self) -> Vec<&Project> {

@@ -117,6 +117,10 @@ impl Config {
     }
 
     pub fn add_recent_project(&mut self, project: &Project) {
+        self.add_recent_project_with_ide(project, self.default_ide);
+    }
+
+    pub fn add_recent_project_with_ide(&mut self, project: &Project, ide: Ide) {
         self.recent_projects.retain(|p| p.path != project.path);
 
         self.recent_projects.insert(
@@ -125,6 +129,7 @@ impl Config {
                 name: project.name.clone(),
                 path: project.path.clone(),
                 last_opened: Self::now_timestamp(),
+                ide: Some(ide),
             },
         );
 

@@ -148,8 +148,8 @@ fn move_down_on_recent_tab_stops_at_end() {
     state.active_tab = Tab::Recent;
 
     state.recent_projects = vec![
-        RecentProject { name: "a".into(), path: PathBuf::from("/a"), last_opened: 0 },
-        RecentProject { name: "b".into(), path: PathBuf::from("/b"), last_opened: 0 },
+        RecentProject { name: "a".into(), path: PathBuf::from("/a"), last_opened: 0, ide: None },
+        RecentProject { name: "b".into(), path: PathBuf::from("/b"), last_opened: 0, ide: None },
     ];
 
     state.move_down();
@@ -221,4 +221,55 @@ fn get_project_ide_falls_back_to_first_installed_if_default_uninstalled() {
 
     let p = project("demo");
     assert_eq!(state.get_project_ide(&p.path), Ide::Cursor);
+}
+
+#[test]
+fn cycle_selected_ide_on_recent_tab() {
+    use dev_cli::models::recent_project::RecentProject;
+    use dev_cli::tui::state::Tab;
+    use std::path::PathBuf;
+
+    let mut state = AppState::new();
+    state.active_tab = Tab::Recent;
+    state.installed_ides = vec![Ide::Vscode, Ide::Claude];
+    let path = PathBuf::from("/tmp/recent_demo");
+    state.recent_projects = vec![RecentProject {
+        name: "recent_demo".into(),
+        path: path.clone(),
+        last_opened: 100,
+        ide: Some(Ide::Vscode),
+    }];
+
+    assert_eq!(state.get_recent_project_ide(&state.recent_projects[0]), Ide::Vscode);
+
+    state.cycle_selected_ide();
+    assert_eq!(state.get_recent_project_ide(&state.recent_projects[0]), Ide::Claude);
+
+    state.cycle_selected_ide();
+    assert_eq!(state.get_recent_project_ide(&state.recent_projects[0]), Ide::Vscode);
+}
+
+#[test]
+fn projects_tab_uses_default_ide_not_recent_ide() {
+    use dev_cli::models::recent_project::RecentProject;
+    use std::path::PathBuf;
+
+    let mut state = AppState::new();
+    state.default_ide = Ide::Vscode;
+    state.installed_ides = vec![Ide::Vscode, Ide::Claude];
+
+    let path = PathBuf::from("/tmp/shared_demo");
+    let recent = RecentProject {
+        name: "shared_demo".into(),
+        path: path.clone(),
+        last_opened: 100,
+        ide: Some(Ide::Claude),
+    };
+    state.recent_projects = vec![recent.clone()];
+
+    // Recent tab uses recent.ide (Claude)
+    assert_eq!(state.get_recent_project_ide(&recent), Ide::Claude);
+
+    // Projects tab uses default_ide (VS Code), ignoring recent.ide
+    assert_eq!(state.get_project_ide(&path), Ide::Vscode);
 }

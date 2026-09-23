@@ -26,7 +26,7 @@ where
 {
     let mut config = Config::load()?;
     launch(ide, &project.path)?;
-    config.add_recent_project(project);
+    config.add_recent_project_with_ide(project, ide);
     config.save()?;
     Ok(())
 }

@@ -366,6 +366,7 @@ fn recent_widget_renders_project_name() -> Result<()> {
             name: "weather-app".into(),
             path: PathBuf::from("/projects/weather-app"),
             last_opened: 0,
+            ide: None,
         });
 
         config.save()?;
@@ -400,6 +401,7 @@ fn recent_widget_renders_relative_timestamp() -> Result<()> {
             name: "weather-app".into(),
             path: PathBuf::from("/projects/weather-app"),
             last_opened: now,
+            ide: None,
         });
 
         config.save()?;
@@ -455,6 +457,7 @@ fn recent_tab_renders_recent_widget() {
                 name: "weather-app".into(),
                 path: PathBuf::from("/projects/weather-app"),
                 last_opened: now,
+                ide: None,
             }],
         }
         .save()

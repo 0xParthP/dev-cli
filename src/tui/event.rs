@@ -89,7 +89,7 @@ where
                     if !recent.name.is_empty() {
                         project.name = recent.name.clone();
                     }
-                    let ide = state.get_project_ide(&project.path);
+                    let ide = state.get_recent_project_ide(recent);
                     if launcher(ide, &project).is_ok() {
                         state.pending_launch = Some((ide, project));
                         state.quit();
