@@ -219,6 +219,7 @@ fn recent_projects_round_trip_serialization() -> Result<()> {
                 name: "weather-app".into(),
                 path: PathBuf::from("/projects/weather-app"),
                 last_opened: now,
+                ide: None,
             }],
         };
 

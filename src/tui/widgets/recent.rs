@@ -66,7 +66,21 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
 
             let left_width = UnicodeWidthStr::width(left.as_str());
             let age_width = UnicodeWidthStr::width(age.as_str());
-            let spacing = inner_width.saturating_sub(left_width + age_width);
+            let line1_spacing = inner_width.saturating_sub(left_width + age_width);
+
+            let ide = state.get_recent_project_ide(project);
+            let badge = format!("[{}]", ide.display_name());
+            let path_str = display_path(&project.path);
+
+            let path_left = format!("   {}", path_str);
+            let path_width = UnicodeWidthStr::width(path_left.as_str());
+            let badge_width = UnicodeWidthStr::width(badge.as_str());
+
+            let line2_spacing = if inner_width > path_width + badge_width {
+                inner_width - path_width - badge_width
+            } else {
+                2
+            };
 
             ListItem::new(vec![
                 Line::from(vec![
@@ -74,12 +88,17 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
                         left,
                         Style::default().fg(theme::TEXT).add_modifier(Modifier::BOLD),
                     ),
-                    Span::raw(" ".repeat(spacing)),
+                    Span::raw(" ".repeat(line1_spacing)),
                     Span::styled(age, Style::default().fg(theme::INFO)),
                 ]),
                 Line::from(vec![
                     Span::raw("   "),
-                    Span::styled(display_path(&project.path), Style::default().fg(theme::MUTED)),
+                    Span::styled(path_str, Style::default().fg(theme::MUTED)),
+                    Span::raw(" ".repeat(line2_spacing)),
+                    Span::styled(
+                        badge,
+                        Style::default().fg(ide.color()).add_modifier(Modifier::BOLD),
+                    ),
                 ]),
                 Line::default(),
             ])
