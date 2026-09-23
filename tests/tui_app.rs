@@ -6,6 +6,8 @@ use dev_cli::tui::{
 };
 use ratatui::{Terminal, backend::TestBackend};
 
+mod common;
+
 #[test]
 fn dashboard_draws_successfully() -> Result<()> {
     let backend = TestBackend::new(80, 24);
@@ -170,4 +172,19 @@ fn repeated_draw_calls_are_safe() -> Result<()> {
     }
 
     Ok(())
+}
+
+#[test]
+fn test_process_pending_launch_none_and_some() {
+    use dev_cli::models::ide::Ide;
+    use dev_cli::tui::app::process_pending_launch;
+
+    let mut state = AppState::new();
+    // Test with None
+    process_pending_launch(&state);
+
+    // Test with Some
+    let proj = common::factories::fake_project("test-proj");
+    state.pending_launch = Some((Ide::Claude, proj));
+    process_pending_launch(&state);
 }

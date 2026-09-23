@@ -54,13 +54,10 @@ pub fn launch(ide: Ide, project: &Path) -> Result<()> {
 pub fn launch_spawn(ide: Ide, project: &Path, executable: &Path) -> Result<()> {
     match ide {
         Ide::Claude => {
-            #[cfg(not(test))]
-            let result = Command::new(executable).current_dir(project).status().map(|_| ());
-
-            #[cfg(test)]
-            let result = Command::new(executable).current_dir(project).spawn().map(|_| ());
-
-            result.context("Couldn't start Claude Code")?;
+            Command::new(executable)
+                .current_dir(project)
+                .status()
+                .context("Couldn't start Claude Code")?;
         }
         Ide::Terminal => {
             Command::new(executable)

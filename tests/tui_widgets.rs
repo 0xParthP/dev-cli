@@ -73,6 +73,23 @@ fn project_list_renders() -> Result<()> {
 }
 
 #[test]
+#[serial]
+fn project_list_renders_narrow() -> Result<()> {
+    let mut state = AppState::new();
+    state.active_tab = Tab::Projects;
+    state.set_projects(vec![project("alpha")]);
+
+    let backend = TestBackend::new(12, 10);
+    let mut terminal = Terminal::new(backend)?;
+
+    terminal.draw(|frame| {
+        project_list::render(frame, frame.area(), &state);
+    })?;
+
+    Ok(())
+}
+
+#[test]
 fn footer_renders() -> Result<()> {
     let backend = TestBackend::new(80, 2);
     let mut terminal = Terminal::new(backend)?;

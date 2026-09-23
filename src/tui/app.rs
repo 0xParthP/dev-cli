@@ -33,11 +33,16 @@ pub fn run() -> Result<()> {
 
     restore_terminal(terminal)?;
 
-    if let Some((ide, project)) = state.pending_launch {
-        let _ = super::actions::open_project_with_ide(&project, ide, crate::ide::launcher::launch);
-    }
+    process_pending_launch(&state);
 
     result
+}
+
+/// Process any pending IDE launch requested before app exit.
+pub fn process_pending_launch(state: &AppState) {
+    if let Some((ide, ref project)) = state.pending_launch {
+        let _ = super::actions::open_project_with_ide(project, ide, crate::ide::launcher::launch);
+    }
 }
 
 /// Creates a fresh state and runs the event loop.
