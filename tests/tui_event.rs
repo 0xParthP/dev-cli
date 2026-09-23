@@ -37,6 +37,7 @@ fn key(code: KeyCode) -> Event {
 }
 
 #[test]
+#[serial]
 fn does_nothing_when_no_event_available() -> Result<()> {
     let mut state = AppState::new();
 
@@ -47,6 +48,7 @@ fn does_nothing_when_no_event_available() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn quits_on_escape() -> Result<()> {
     let mut state = AppState::new();
 
@@ -57,6 +59,7 @@ fn quits_on_escape() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn ignores_other_keys() -> Result<()> {
     let mut state = AppState::new();
 
@@ -67,6 +70,7 @@ fn ignores_other_keys() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn ignores_resize_events() -> Result<()> {
     let mut state = AppState::new();
 
@@ -77,6 +81,7 @@ fn ignores_resize_events() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn esc_key_quits() {
     let mut state = AppState::new();
 
@@ -86,6 +91,7 @@ fn esc_key_quits() {
 }
 
 #[test]
+#[serial]
 fn other_keys_do_nothing() {
     let mut state = AppState::new();
 
@@ -97,6 +103,7 @@ fn other_keys_do_nothing() {
 /// ===== Tests for milestone 4.2.3 =====
 
 #[test]
+#[serial]
 fn down_key_moves_selection() {
     let mut state = AppState::new();
     state.set_projects(vec![project("alpha"), project("beta")]);
@@ -107,6 +114,7 @@ fn down_key_moves_selection() {
 }
 
 #[test]
+#[serial]
 fn up_key_moves_selection() {
     let mut state = AppState::new();
     state.set_projects(vec![project("alpha"), project("beta")]);
@@ -118,6 +126,7 @@ fn up_key_moves_selection() {
 }
 
 #[test]
+#[serial]
 fn typing_adds_character() {
     let mut state = AppState::new();
 
@@ -128,6 +137,7 @@ fn typing_adds_character() {
 }
 
 #[test]
+#[serial]
 fn backspace_removes_character() {
     let mut state = AppState::new();
     state.search_query = "cursor".into();
@@ -138,6 +148,7 @@ fn backspace_removes_character() {
 }
 
 #[test]
+#[serial]
 fn enter_key_does_nothing_without_projects() {
     let mut state = AppState::default();
 
@@ -147,6 +158,7 @@ fn enter_key_does_nothing_without_projects() {
 }
 
 #[test]
+#[serial]
 fn open_project_calls_launcher() -> Result<()> {
     with_temp_config(|| -> Result<()> {
         // Give the test its own isolated config.
@@ -176,6 +188,7 @@ fn open_project_calls_launcher() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn ignores_mouse_events() -> Result<()> {
     let mut state = AppState::new();
 
@@ -198,6 +211,7 @@ fn ignores_mouse_events() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn open_project_returns_launcher_error() -> Result<()> {
     let project = project("demo");
 
@@ -211,18 +225,24 @@ fn open_project_returns_launcher_error() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn enter_does_nothing_when_filtered_list_is_empty() {
     let mut state = AppState { search_query: "weather".into(), ..Default::default() };
     state.set_projects(vec![project("cursor")]);
 
-    handle_key_with_launcher(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE), &mut state, |_| {
-        panic!("launcher should not be called");
-    });
+    handle_key_with_launcher(
+        KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
+        &mut state,
+        |_, _| {
+            panic!("launcher should not be called");
+        },
+    );
 
     assert!(!state.should_quit);
 }
 
 #[test]
+#[serial]
 fn enter_does_not_quit_when_open_project_fails() {
     let mut state = AppState::default();
     state.set_projects(vec![project("demo")]);
@@ -230,13 +250,14 @@ fn enter_does_not_quit_when_open_project_fails() {
     handle_key_with_launcher(
         KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
         &mut state,
-        |_project| Err(anyhow::anyhow!("launch failed")),
+        |_ide, _project| Err(anyhow::anyhow!("launch failed")),
     );
 
     assert!(!state.should_quit);
 }
 
 #[test]
+#[serial]
 fn poll_false_does_not_read_event() -> Result<()> {
     let mut state = AppState::new();
 
@@ -248,6 +269,7 @@ fn poll_false_does_not_read_event() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn right_arrow_switches_tabs() {
     let mut state = AppState::new();
     state.active_tab = Tab::Recent;
@@ -263,6 +285,7 @@ fn right_arrow_switches_tabs() {
 }
 
 #[test]
+#[serial]
 fn left_arrow_switches_tabs() {
     let mut state = AppState::new();
     state.active_tab = Tab::Settings;
@@ -278,6 +301,7 @@ fn left_arrow_switches_tabs() {
 }
 
 #[test]
+#[serial]
 fn left_arrow_does_not_go_before_projects() {
     let mut state = AppState::new();
 
@@ -287,6 +311,7 @@ fn left_arrow_does_not_go_before_projects() {
 }
 
 #[test]
+#[serial]
 fn right_arrow_does_not_go_past_settings() {
     let mut state = AppState::new();
     state.active_tab = Tab::Settings;
@@ -297,6 +322,7 @@ fn right_arrow_does_not_go_past_settings() {
 }
 
 #[test]
+#[serial]
 fn enter_key_on_recent_tab_launches_project() {
     let mut state = AppState::new();
     state.active_tab = Tab::Recent;
@@ -310,7 +336,7 @@ fn enter_key_on_recent_tab_launches_project() {
     handle_key_with_launcher(
         KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
         &mut state,
-        |project| {
+        |_ide, project| {
             launched.store(true, std::sync::atomic::Ordering::Relaxed);
             assert_eq!(project.name, "recent_app");
             Ok(())
@@ -322,6 +348,7 @@ fn enter_key_on_recent_tab_launches_project() {
 }
 
 #[test]
+#[serial]
 fn enter_key_on_recent_tab_does_not_quit_on_error() {
     let mut state = AppState::new();
     state.active_tab = Tab::Recent;
@@ -334,7 +361,7 @@ fn enter_key_on_recent_tab_does_not_quit_on_error() {
     handle_key_with_launcher(
         KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
         &mut state,
-        |_project| Err(anyhow::anyhow!("failed to launch")),
+        |_ide, _project| Err(anyhow::anyhow!("failed to launch")),
     );
 
     assert!(!state.should_quit);
@@ -362,7 +389,7 @@ fn enter_key_on_recent_tab_reupdates_recent_project_in_config() {
         handle_key_with_launcher(
             KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
             &mut state,
-            |p| actions::open_project_with(p, |_, _| Ok(())),
+            |ide, p| actions::open_project_with_ide(p, ide, |_, _| Ok(())),
         );
 
         let updated_config = Config::load().unwrap();
@@ -371,8 +398,52 @@ fn enter_key_on_recent_tab_reupdates_recent_project_in_config() {
 }
 
 #[test]
+#[serial]
 fn f1_key_triggers_refresh() {
     let mut state = AppState::new();
     handle_key(KeyEvent::new(KeyCode::F(1), KeyModifiers::NONE), &mut state);
     assert!(!state.should_quit);
+}
+
+#[test]
+#[serial]
+fn tab_key_cycles_selected_project_ide() {
+    let mut state = AppState::new();
+    state.installed_ides = vec![Ide::Cursor, Ide::Vscode, Ide::Claude];
+    state.set_projects(vec![project("alpha")]);
+    state.selected_index = 1;
+    state.default_ide = Ide::Cursor;
+
+    assert_eq!(state.get_project_ide(&state.filtered_projects()[0].path), Ide::Cursor);
+
+    handle_key(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE), &mut state);
+
+    assert_eq!(state.get_project_ide(&state.filtered_projects()[0].path), Ide::Vscode);
+}
+
+#[test]
+#[serial]
+fn enter_key_launches_project_with_selected_ide() {
+    let mut state = AppState::new();
+    state.installed_ides = vec![Ide::Cursor, Ide::Vscode, Ide::Claude];
+    state.set_projects(vec![project("alpha")]);
+    state.selected_index = 1;
+    state.default_ide = Ide::Cursor;
+
+    // Cycle once to VS Code
+    handle_key(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE), &mut state);
+
+    let launched_ide = std::sync::Arc::new(std::sync::Mutex::new(None));
+    let launched_ide_clone = launched_ide.clone();
+    handle_key_with_launcher(
+        KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
+        &mut state,
+        move |ide, _project| {
+            *launched_ide_clone.lock().unwrap() = Some(ide);
+            Ok(())
+        },
+    );
+
+    assert_eq!(*launched_ide.lock().unwrap(), Some(Ide::Vscode));
+    assert!(state.should_quit);
 }

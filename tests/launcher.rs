@@ -9,23 +9,18 @@ use temp_env::with_var;
 static FAKE_EXE_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 fn fake_executable() -> String {
-    // Choose appropriate script name and content based on OS
     let (suffix, content) = if cfg!(windows) {
         ("bat", "@echo off\r\nexit /b 0\r\n")
     } else {
         ("sh", "#!/bin/sh\nexit 0\n")
     };
 
-    // Each call mints a fresh, unique path so a run of serial tests cannot
-    // collide on the same inode. pid + counter guarantees uniqueness even
-    // if `cargo test` is re-run with stale files lying around.
     let n = FAKE_EXE_COUNTER.fetch_add(1, Ordering::Relaxed);
     let path: PathBuf =
         env::temp_dir().join(format!("devcli_fake_launcher.{}.{n}.{suffix}", std::process::id()));
 
     fs::write(&path, content).expect("failed to create fake launcher");
 
-    // On Unix, the script must be executable; Windows ignores the bit.
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -45,31 +40,32 @@ where
     let bin_dir = dir.path().join("bin");
     fs::create_dir_all(&bin_dir).unwrap();
 
+    // .bat has been used instead of .exe to prevent Windows defender/smartscreen flagging and breaking tests.
     let exe_name = match ide {
         Ide::Cursor => {
             if cfg!(windows) {
-                "cursor.exe"
+                "cursor.bat"
             } else {
                 "cursor"
             }
         }
         Ide::Claude => {
             if cfg!(windows) {
-                "claude.exe"
+                "claude.bat"
             } else {
                 "claude"
             }
         }
         Ide::Terminal => {
             if cfg!(windows) {
-                "wt.exe"
+                "wt.bat"
             } else {
                 "wt"
             }
         }
         _ => {
             if cfg!(windows) {
-                "code.exe"
+                "code.bat"
             } else {
                 "code"
             }
@@ -79,9 +75,7 @@ where
     let path = bin_dir.join(exe_name);
 
     if cfg!(windows) {
-        let comspec =
-            env::var("COMSPEC").unwrap_or_else(|_| r"C:\Windows\System32\cmd.exe".to_string());
-        fs::copy(comspec, &path).unwrap();
+        fs::write(&path, "@echo off\r\nexit /b 0\r\n").unwrap();
     } else {
         let script_content = "#!/bin/sh\nexit 0\n";
         fs::write(&path, script_content).unwrap();

@@ -1,4 +1,5 @@
 use anyhow::{Result, anyhow};
+use serial_test::serial;
 use temp_env::with_var;
 use tempfile::TempDir;
 
@@ -16,6 +17,7 @@ where
 }
 
 #[test]
+#[serial]
 fn open_project_uses_default_ide() -> Result<()> {
     with_temp_config(|| -> Result<()> {
         Config { projects_root: vec![], default_ide: Ide::Vscode, recent_projects: Vec::new() }
@@ -38,6 +40,7 @@ fn open_project_uses_default_ide() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn open_project_propagates_launcher_error() -> Result<()> {
     with_temp_config(|| -> Result<()> {
         Config { projects_root: vec![], default_ide: Ide::Vscode, recent_projects: Vec::new() }
@@ -53,7 +56,7 @@ fn open_project_propagates_launcher_error() -> Result<()> {
 }
 
 #[test]
-#[serial_test::serial]
+#[serial]
 fn open_path_launches_and_updates_recents() {
     with_temp_config(|| {
         let temp = tempfile::TempDir::new().unwrap();
@@ -61,12 +64,10 @@ fn open_path_launches_and_updates_recents() {
 
         let bin_dir = temp.path().join("bin");
         std::fs::create_dir_all(&bin_dir).unwrap();
-        let exe = if cfg!(windows) { "code.exe" } else { "code" };
+        let exe = if cfg!(windows) { "code.bat" } else { "code" };
         let exe_path = bin_dir.join(exe);
         if cfg!(windows) {
-            let comspec = std::env::var("COMSPEC")
-                .unwrap_or_else(|_| r"C:\Windows\System32\cmd.exe".to_string());
-            std::fs::copy(comspec, &exe_path).unwrap();
+            std::fs::write(&exe_path, "@echo off\r\nexit /b 0\r\n").unwrap();
         } else {
             std::fs::write(&exe_path, "#!/bin/sh\nexit 0\n").unwrap();
             #[cfg(unix)]

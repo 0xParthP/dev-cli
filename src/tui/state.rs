@@ -1,8 +1,10 @@
 //! Application state for the dashboard.
 
+use std::{collections::HashMap, path::PathBuf};
+
 use crate::{
     config::Config,
-    models::{project::Project, recent_project::RecentProject},
+    models::{ide::Ide, project::Project, recent_project::RecentProject},
     tui::tree::{DisplayNode, TreeNode, build_project_tree, flatten_filtered_tree, flatten_tree},
 };
 
@@ -38,10 +40,41 @@ pub struct AppState {
 
     /// Currently active tab.
     pub active_tab: Tab,
+
+    /// Configured default IDE.
+    pub default_ide: Ide,
+
+    /// Installed IDEs available on the system.
+    pub installed_ides: Vec<Ide>,
+
+    /// Per-project IDE selection overrides.
+    pub ide_overrides: HashMap<PathBuf, Ide>,
+
+    /// Project and IDE pending launch after TUI exit.
+    pub pending_launch: Option<(Ide, Project)>,
 }
 
 impl Default for AppState {
     fn default() -> Self {
+        let default_ide = Config::load().map(|config| config.default_ide).unwrap_or(Ide::Vscode);
+
+        let detected: Vec<Ide> =
+            crate::ide::detect::detect_ides().into_iter().map(|i| i.ide).collect();
+
+        let installed_ides = if detected.is_empty() {
+            vec![
+                Ide::Cursor,
+                Ide::Vscode,
+                Ide::Claude,
+                Ide::Terminal,
+                Ide::Idea,
+                Ide::Rider,
+                Ide::Zed,
+            ]
+        } else {
+            detected
+        };
+
         Self {
             projects: Vec::new(),
             project_tree: Vec::new(),
@@ -50,6 +83,10 @@ impl Default for AppState {
             selected_index: 0,
             should_quit: false,
             active_tab: Tab::Projects,
+            default_ide,
+            installed_ides,
+            ide_overrides: HashMap::new(),
+            pending_launch: None,
         }
     }
 }
@@ -83,6 +120,32 @@ impl AppState {
 
     pub fn quit(&mut self) {
         self.should_quit = true;
+    }
+
+    /// Get the target IDE for a project path (override or default).
+    pub fn get_project_ide(&self, path: &std::path::Path) -> Ide {
+        let ide = self.ide_overrides.get(path).copied().unwrap_or(self.default_ide);
+        if !self.installed_ides.is_empty() && !self.installed_ides.contains(&ide) {
+            self.installed_ides[0]
+        } else {
+            ide
+        }
+    }
+
+    /// Cycle through available installed IDEs for the currently selected project.
+    pub fn cycle_selected_ide(&mut self) {
+        if self.active_tab != Tab::Projects || self.installed_ides.is_empty() {
+            return;
+        }
+
+        if let Some(project) = self.selected_project() {
+            let current_ide = self.get_project_ide(&project.path);
+            let next_ide = match self.installed_ides.iter().position(|&i| i == current_ide) {
+                Some(idx) => self.installed_ides[(idx + 1) % self.installed_ides.len()],
+                None => self.installed_ides[0],
+            };
+            self.ide_overrides.insert(project.path.clone(), next_ide);
+        }
     }
 
     pub fn filtered_projects(&self) -> Vec<&Project> {

@@ -16,6 +16,7 @@ use crate::{
     },
     utils::path::display_path,
 };
+use unicode_width::UnicodeWidthStr;
 
 /// Render the widget onto the given frame and area.
 pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
@@ -39,6 +40,8 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
         return;
     }
 
+    let available_width = area.width.saturating_sub(4) as usize;
+
     let list_items: Vec<ListItem> = items
         .iter()
         .map(|node| {
@@ -51,20 +54,45 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
                 ("📦 ", theme::INFO, "   ")
             };
 
+            let path_str = display_path(node.path);
+
+            let mut line2_spans = vec![
+                Span::raw(indent.clone()),
+                Span::raw(path_padding),
+                Span::styled(path_str.clone(), Style::default().fg(theme::MUTED)),
+            ];
+
+            if !node.is_folder {
+                let ide = state.get_project_ide(node.path);
+                let badge = format!("[{}]", ide.display_name());
+                let left_len = UnicodeWidthStr::width(indent.as_str())
+                    + UnicodeWidthStr::width(path_padding)
+                    + UnicodeWidthStr::width(path_str.as_str());
+                let badge_len = UnicodeWidthStr::width(badge.as_str());
+
+                let spaces = if available_width > left_len + badge_len {
+                    available_width - left_len - badge_len
+                } else {
+                    2
+                };
+
+                line2_spans.push(Span::raw(" ".repeat(spaces)));
+                line2_spans.push(Span::styled(
+                    badge,
+                    Style::default().fg(ide.color()).add_modifier(Modifier::BOLD),
+                ));
+            }
+
             ListItem::new(vec![
                 Line::from(vec![
-                    Span::raw(indent.clone()),
+                    Span::raw(indent),
                     Span::styled(icon, Style::default().fg(icon_color)),
                     Span::styled(
                         node.name,
                         Style::default().fg(theme::TEXT).add_modifier(Modifier::BOLD),
                     ),
                 ]),
-                Line::from(vec![
-                    Span::raw(indent),
-                    Span::raw(path_padding),
-                    Span::styled(display_path(node.path), Style::default().fg(theme::MUTED)),
-                ]),
+                Line::from(line2_spans),
                 Line::default(),
             ])
         })

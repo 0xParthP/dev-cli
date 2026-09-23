@@ -81,10 +81,10 @@ fn run_open_test(ide: &str) {
 
     #[cfg(windows)]
     let exe = match ide {
-        "cursor" => "cursor.exe",
-        "terminal" => "wt.exe",
-        "claude" => "claude.exe",
-        _ => "code.exe",
+        "cursor" => "cursor.bat",
+        "terminal" => "wt.bat",
+        "claude" => "claude.bat",
+        _ => "code.bat",
     };
     #[cfg(not(windows))]
     let exe = match ide {
@@ -96,9 +96,7 @@ fn run_open_test(ide: &str) {
 
     let exe_path = bin_dir.join(exe);
     if cfg!(windows) {
-        let comspec =
-            std::env::var("COMSPEC").unwrap_or_else(|_| r"C:\Windows\System32\cmd.exe".to_string());
-        std::fs::copy(comspec, &exe_path).ok();
+        std::fs::write(&exe_path, "@echo off\r\nexit /b 0\r\n").ok();
     } else {
         std::fs::write(&exe_path, "#!/bin/sh\nexit 0\n").ok();
         #[cfg(unix)]
@@ -153,15 +151,13 @@ fn open_shortcut_command_runs() {
     std::fs::create_dir_all(&bin_dir).ok();
 
     #[cfg(windows)]
-    let exe = "cursor.exe";
+    let exe = "cursor.bat";
     #[cfg(not(windows))]
     let exe = "cursor";
 
     let exe_path = bin_dir.join(exe);
     if cfg!(windows) {
-        let comspec =
-            std::env::var("COMSPEC").unwrap_or_else(|_| r"C:\Windows\System32\cmd.exe".to_string());
-        std::fs::copy(comspec, &exe_path).ok();
+        std::fs::write(&exe_path, "@echo off\r\nexit /b 0\r\n").ok();
     } else {
         std::fs::write(&exe_path, "#!/bin/sh\nexit 0\n").ok();
         #[cfg(unix)]
