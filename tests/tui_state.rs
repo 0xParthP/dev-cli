@@ -1,5 +1,5 @@
 use crate::common::factories::fake_project as project;
-use dev_cli::tui::state::AppState;
+use dev_cli::{models::ide::Ide, tui::state::AppState};
 
 mod common;
 
@@ -169,4 +169,56 @@ fn typing_resets_selection() {
 
     assert_eq!(state.selected_index, 0);
     assert_eq!(state.search_query, "a");
+}
+
+#[test]
+fn refresh_reloads_projects_and_recents() {
+    let mut state = AppState::new();
+    state.selected_index = 100;
+    assert!(state.refresh().is_ok());
+    assert!(state.selected_index < state.visible_items().len().max(1));
+}
+
+#[test]
+fn cycle_selected_ide_updates_override() {
+    let mut state = AppState::new();
+    state.installed_ides = vec![Ide::Vscode, Ide::Cursor, Ide::Claude];
+    let p = project("demo");
+    state.set_projects(vec![p.clone()]);
+    state.selected_index = 1; // Highlight demo project under root
+
+    assert_eq!(state.get_project_ide(&p.path), Ide::Vscode);
+    state.cycle_selected_ide();
+    assert_eq!(state.get_project_ide(&p.path), Ide::Cursor);
+    state.cycle_selected_ide();
+    assert_eq!(state.get_project_ide(&p.path), Ide::Claude);
+    state.cycle_selected_ide();
+    assert_eq!(state.get_project_ide(&p.path), Ide::Vscode);
+}
+
+#[test]
+fn cycle_selected_ide_skips_uninstalled_ides() {
+    let mut state = AppState::new();
+    state.installed_ides = vec![Ide::Vscode, Ide::Terminal];
+    let p = project("demo");
+    state.set_projects(vec![p.clone()]);
+    state.selected_index = 1;
+
+    assert_eq!(state.get_project_ide(&p.path), Ide::Vscode);
+
+    state.cycle_selected_ide();
+    assert_eq!(state.get_project_ide(&p.path), Ide::Terminal);
+
+    state.cycle_selected_ide();
+    assert_eq!(state.get_project_ide(&p.path), Ide::Vscode);
+}
+
+#[test]
+fn get_project_ide_falls_back_to_first_installed_if_default_uninstalled() {
+    let mut state = AppState::new();
+    state.default_ide = Ide::Idea;
+    state.installed_ides = vec![Ide::Cursor, Ide::Claude];
+
+    let p = project("demo");
+    assert_eq!(state.get_project_ide(&p.path), Ide::Cursor);
 }

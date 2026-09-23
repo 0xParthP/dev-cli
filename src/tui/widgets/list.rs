@@ -25,9 +25,7 @@ pub fn render_list(
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(theme::BORDER)),
         )
-        .highlight_style(
-            Style::default().bg(theme::HIGHLIGHT_BG).fg(theme::TEXT).add_modifier(Modifier::BOLD),
-        )
+        .highlight_style(Style::default().bg(theme::HIGHLIGHT_BG).add_modifier(Modifier::BOLD))
         .highlight_symbol("❯ ");
 
     let mut state = ListState::default();

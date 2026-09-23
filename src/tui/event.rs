@@ -7,7 +7,7 @@ use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 
 use crate::{models::project::Project, tui::state::Tab};
 
-use super::{actions, state::AppState};
+use super::state::AppState;
 
 /// Poll and handle terminal events.
 pub fn handle_events(state: &mut AppState) -> Result<()> {
@@ -34,16 +34,22 @@ where
 
 /// Handle standard key events.
 pub fn handle_key(key: KeyEvent, state: &mut AppState) {
-    handle_key_with_launcher(key, state, actions::open_project)
+    handle_key_with_launcher(key, state, |_ide, _project| Ok(()))
 }
 
 /// Handle key events with a custom launcher dependency injection.
 pub fn handle_key_with_launcher<L>(key: KeyEvent, state: &mut AppState, launcher: L)
 where
-    L: Fn(&Project) -> Result<()>,
+    L: Fn(crate::models::ide::Ide, &Project) -> Result<()>,
 {
     match key.code {
         KeyCode::Esc => state.quit(),
+        KeyCode::F(1) => {
+            let _ = state.refresh();
+        }
+        KeyCode::Tab => {
+            state.cycle_selected_ide();
+        }
 
         KeyCode::Down => state.move_down(),
         KeyCode::Up => state.move_up(),
@@ -68,8 +74,12 @@ where
 
                 if is_folder {
                     state.toggle_selected();
-                } else if state.selected_project().is_some_and(|p| launcher(p).is_ok()) {
-                    state.quit();
+                } else if let Some(project) = state.selected_project() {
+                    let ide = state.get_project_ide(&project.path);
+                    if launcher(ide, project).is_ok() {
+                        state.pending_launch = Some((ide, project.clone()));
+                        state.quit();
+                    }
                 }
             }
 
@@ -79,7 +89,9 @@ where
                     if !recent.name.is_empty() {
                         project.name = recent.name.clone();
                     }
-                    if launcher(&project).is_ok() {
+                    let ide = state.get_project_ide(&project.path);
+                    if launcher(ide, &project).is_ok() {
+                        state.pending_launch = Some((ide, project));
                         state.quit();
                     }
                 }

@@ -17,7 +17,11 @@ pub fn render(frame: &mut Frame, area: Rect) {
         Span::raw("  "),
         Span::styled("↑↓ Navigate", Style::default().fg(theme::PRIMARY)),
         Span::raw("  "),
+        Span::styled("Tab IDE", Style::default().fg(theme::PRIMARY)),
+        Span::raw("  "),
         Span::styled("/ Search", Style::default().fg(theme::WARNING)),
+        Span::raw("  "),
+        Span::styled("F1 Refresh", Style::default().fg(theme::PURPLE)),
         Span::raw("  "),
         Span::styled("Esc Quit", Style::default().fg(theme::DANGER)),
     ]);

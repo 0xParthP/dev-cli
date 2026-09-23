@@ -16,15 +16,13 @@ fn isolated_cmd(dir: &TempDir) -> Command {
     std::fs::create_dir_all(&bin_dir).ok();
 
     #[cfg(windows)]
-    let exe_name = "cursor.exe";
+    let exe_name = "cursor.bat";
     #[cfg(not(windows))]
     let exe_name = "cursor";
 
     let exe_path = bin_dir.join(exe_name);
     if cfg!(windows) {
-        let comspec =
-            std::env::var("COMSPEC").unwrap_or_else(|_| r"C:\Windows\System32\cmd.exe".to_string());
-        std::fs::copy(comspec, &exe_path).ok();
+        std::fs::write(&exe_path, "@echo off\r\nexit /b 0\r\n").ok();
     } else {
         std::fs::write(&exe_path, "#!/bin/sh\nexit 0\n").ok();
         #[cfg(unix)]

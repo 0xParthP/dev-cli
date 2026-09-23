@@ -24,11 +24,25 @@ pub fn run() -> Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let result = run_loop(&mut terminal, event::handle_events);
+    let mut state = AppState::new();
+    state.set_projects(super::data::load_projects()?);
+    state.load_recent_projects();
+    state.active_tab = super::state::Tab::Recent;
+
+    let result = run_loop_with_state(&mut terminal, &mut state, event::handle_events);
 
     restore_terminal(terminal)?;
 
+    process_pending_launch(&state);
+
     result
+}
+
+/// Process any pending IDE launch requested before app exit.
+pub fn process_pending_launch(state: &AppState) {
+    if let Some((ide, ref project)) = state.pending_launch {
+        let _ = super::actions::open_project_with_ide(project, ide, crate::ide::launcher::launch);
+    }
 }
 
 /// Creates a fresh state and runs the event loop.

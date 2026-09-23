@@ -45,6 +45,7 @@ fn header_renders() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn search_renders() -> Result<()> {
     let backend = TestBackend::new(80, 3);
     let mut terminal = Terminal::new(backend)?;
@@ -58,10 +59,28 @@ fn search_renders() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn project_list_renders() -> Result<()> {
     let backend = TestBackend::new(80, 10);
     let mut terminal = Terminal::new(backend)?;
     let state = AppState::new();
+
+    terminal.draw(|frame| {
+        project_list::render(frame, frame.area(), &state);
+    })?;
+
+    Ok(())
+}
+
+#[test]
+#[serial]
+fn project_list_renders_narrow() -> Result<()> {
+    let mut state = AppState::new();
+    state.active_tab = Tab::Projects;
+    state.set_projects(vec![project("alpha")]);
+
+    let backend = TestBackend::new(12, 10);
+    let mut terminal = Terminal::new(backend)?;
 
     terminal.draw(|frame| {
         project_list::render(frame, frame.area(), &state);
@@ -83,6 +102,7 @@ fn footer_renders() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn search_works() -> Result<()> {
     let mut state = AppState::new();
 
@@ -114,6 +134,7 @@ fn search_works() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn selected_project_is_highlighted() -> Result<()> {
     let mut state = AppState::new();
     state.active_tab = Tab::Projects; // <-- Add this
@@ -138,6 +159,7 @@ fn selected_project_is_highlighted() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn empty_search_state_renders_message() -> Result<()> {
     let mut state = AppState::new();
     state.active_tab = Tab::Projects;
@@ -161,6 +183,7 @@ fn empty_search_state_renders_message() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn search_placeholder_renders() -> Result<()> {
     let state = AppState::new();
 
@@ -198,6 +221,7 @@ fn footer_contains_enter_shortcut() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn scroll_offset_keeps_selection_visible() {
     let mut state = AppState::new();
     state.selected_index = 15;
@@ -224,6 +248,7 @@ fn header_is_centered_and_contains_title() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn tabs_render_projects_tab_selected() -> Result<()> {
     let backend = TestBackend::new(80, 2);
     let mut terminal = Terminal::new(backend)?;
@@ -247,6 +272,7 @@ fn tabs_render_projects_tab_selected() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn tabs_render_settings_tab_selected() -> Result<()> {
     let backend = TestBackend::new(80, 2);
     let mut terminal = Terminal::new(backend)?;
@@ -281,12 +307,15 @@ fn footer_contains_all_shortcuts() -> Result<()> {
     assert!(rendered.contains("Enter"));
     assert!(rendered.contains("Navigate"));
     assert!(rendered.contains("Search"));
+    assert!(rendered.contains("F1"));
+    assert!(rendered.contains("Refresh"));
     assert!(rendered.contains("Quit"));
 
     Ok(())
 }
 
 #[test]
+#[serial]
 fn non_projects_tab_shows_placeholder() -> Result<()> {
     let mut state = AppState::new();
     state.active_tab = Tab::Ide;
@@ -309,20 +338,22 @@ fn non_projects_tab_shows_placeholder() -> Result<()> {
 #[test]
 #[serial]
 fn recent_widget_renders_empty_state() -> Result<()> {
-    let backend = TestBackend::new(60, 10);
-    let mut terminal = Terminal::new(backend)?;
-    let state = AppState::new();
+    with_temp_config(|| -> Result<()> {
+        let backend = TestBackend::new(60, 10);
+        let mut terminal = Terminal::new(backend)?;
+        let state = AppState::new();
 
-    terminal.draw(|frame| {
-        recent::render(frame, frame.area(), &state);
-    })?;
+        terminal.draw(|frame| {
+            recent::render(frame, frame.area(), &state);
+        })?;
 
-    let rendered: String =
-        terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+        let rendered: String =
+            terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
 
-    assert!(rendered.contains("No recent projects"));
+        assert!(rendered.contains("No recent projects"));
 
-    Ok(())
+        Ok(())
+    })
 }
 
 #[test]
@@ -418,7 +449,7 @@ fn recent_tab_renders_recent_widget() {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         Config {
-            projects_root: vec![],
+            projects_root: vec![std::env::temp_dir()],
             default_ide: Ide::Vscode,
             recent_projects: vec![RecentProject {
                 name: "weather-app".into(),

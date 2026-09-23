@@ -56,7 +56,7 @@ pub fn launch_spawn(ide: Ide, project: &Path, executable: &Path) -> Result<()> {
         Ide::Claude => {
             Command::new(executable)
                 .current_dir(project)
-                .spawn()
+                .status()
                 .context("Couldn't start Claude Code")?;
         }
         Ide::Terminal => {
