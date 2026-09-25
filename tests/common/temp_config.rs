@@ -1,4 +1,7 @@
-use dev_cli::{config::Config, models::ide::Ide};
+use dev_cli::{
+    config::Config,
+    models::ide::{Ide, IdeSelection},
+};
 use temp_env::with_var;
 use tempfile::TempDir;
 
@@ -6,8 +9,10 @@ use tempfile::TempDir;
 pub fn test_config() -> Config {
     Config {
         projects_root: vec![TempDir::new().unwrap().path().to_path_buf()],
-        default_ide: Ide::Vscode,
+        default_ide: IdeSelection::BuiltIn(Ide::Vscode),
         recent_projects: Vec::new(),
+        custom_ides: Vec::new(),
+        ..Config::default()
     }
 }
 

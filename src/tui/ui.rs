@@ -7,16 +7,14 @@ use ratatui::{
     widgets::Block,
 };
 
-use crate::tui::widgets::{footer, header, placeholder, project_list, recent, search, tabs};
+use crate::tui::widgets::{footer, header, ide_list, project_list, recent, search, settings, tabs};
 
-use super::{
-    state::{AppState, Tab},
-    theme,
-};
+use super::state::{AppState, Tab};
 
 /// Render the widget onto the given frame and area.
 pub fn render(frame: &mut Frame, state: &AppState) {
-    frame.render_widget(Block::default().bg(theme::BACKGROUND), frame.area());
+    let palette = state.palette();
+    frame.render_widget(Block::default().bg(palette.background), frame.area());
 
     let chunks = Layout::vertical([
         Constraint::Length(2), // Header
@@ -27,23 +25,27 @@ pub fn render(frame: &mut Frame, state: &AppState) {
     ])
     .split(frame.area());
 
-    header::render(frame, chunks[0]);
-    tabs::render(frame, chunks[1], state);
+    header::render(frame, chunks[0], palette);
+    tabs::render(frame, chunks[1], state, palette);
 
     match state.active_tab {
         Tab::Projects => {
-            search::render(frame, chunks[2], state);
-            project_list::render(frame, chunks[3], state);
+            search::render(frame, chunks[2], state, palette);
+            project_list::render(frame, chunks[3], state, palette);
         }
         Tab::Recent => {
             frame.render_widget(Block::default(), chunks[2]);
-            recent::render(frame, chunks[3], state);
+            recent::render(frame, chunks[3], state, palette);
         }
-        Tab::Ide | Tab::Settings => {
+        Tab::Ide => {
             frame.render_widget(Block::default(), chunks[2]);
-            placeholder::render(frame, chunks[3], state.active_tab);
+            ide_list::render(frame, chunks[3], state, palette);
+        }
+        Tab::Settings => {
+            frame.render_widget(Block::default(), chunks[2]);
+            settings::render(frame, chunks[3], state);
         }
     }
 
-    footer::render(frame, chunks[4]);
+    footer::render(frame, chunks[4], state, palette);
 }

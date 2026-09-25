@@ -1,5 +1,8 @@
 use dev_cli::models::recent_project::RecentProject;
-use dev_cli::{config::Config, models::ide::Ide};
+use dev_cli::{
+    config::Config,
+    models::ide::{Ide, IdeSelection},
+};
 use serial_test::serial;
 use std::{
     path::PathBuf,
@@ -32,15 +35,17 @@ fn default_config_has_project_root() {
 #[test]
 fn config_round_trip_serialization() {
     let config = Config {
-        default_ide: Ide::Vscode,
+        default_ide: IdeSelection::BuiltIn(Ide::Vscode),
         projects_root: vec![PathBuf::from("C:/Projects")],
         recent_projects: Vec::new(),
+        custom_ides: Vec::new(),
+        ..Config::default()
     };
 
     let toml = toml::to_string(&config).unwrap();
     let decoded: Config = toml::from_str(&toml).unwrap();
 
-    assert_eq!(decoded.default_ide, Ide::Vscode);
+    assert_eq!(decoded.default_ide, IdeSelection::BuiltIn(Ide::Vscode));
     assert_eq!(decoded.projects_root.len(), 1);
     assert_eq!(decoded.projects_root[0], PathBuf::from("C:/Projects"));
 }
@@ -48,13 +53,15 @@ fn config_round_trip_serialization() {
 #[test]
 fn config_multiple_roots_round_trip() {
     let config = Config {
-        default_ide: Ide::Vscode,
+        default_ide: IdeSelection::BuiltIn(Ide::Vscode),
         projects_root: vec![
             PathBuf::from("C:/Projects"),
             PathBuf::from("D:/Work"),
             PathBuf::from("/tmp/dev"),
         ],
         recent_projects: Vec::new(),
+        custom_ides: Vec::new(),
+        ..Config::default()
     };
 
     let toml = toml::to_string(&config).unwrap();
@@ -66,7 +73,7 @@ fn config_multiple_roots_round_trip() {
 
 #[test]
 fn invalid_toml_returns_error() {
-    let bad = "default_ide = 'banana'";
+    let bad = "default_ide = { invalid = 'structure' }";
 
     let parsed = toml::from_str::<Config>(bad);
 
@@ -97,7 +104,7 @@ fn load_creates_defaults_when_file_missing() {
 
         let config = Config::load().expect("load should succeed");
         assert!(!config.projects_root.is_empty());
-        assert_eq!(config.default_ide, Ide::Vscode);
+        assert_eq!(config.default_ide, IdeSelection::BuiltIn(Ide::Vscode));
 
         // Load should have persisted the defaults.
         assert!(path.exists(), "load() should create the config file when missing");
@@ -138,7 +145,7 @@ fn corrupted_config_is_recreated_with_defaults() {
 
         let config = Config::load().unwrap();
 
-        assert_eq!(config.default_ide, Ide::Vscode);
+        assert_eq!(config.default_ide, IdeSelection::BuiltIn(Ide::Vscode));
         assert_eq!(config.projects_root.len(), 1);
 
         // Ensure the file was rewritten with valid TOML.
@@ -214,13 +221,15 @@ fn recent_projects_round_trip_serialization() -> Result<()> {
 
         let config = Config {
             projects_root: vec![PathBuf::from("/projects")],
-            default_ide: Ide::Cursor,
+            default_ide: IdeSelection::BuiltIn(Ide::Cursor),
             recent_projects: vec![RecentProject {
                 name: "weather-app".into(),
                 path: PathBuf::from("/projects/weather-app"),
                 last_opened: now,
                 ide: None,
             }],
+            custom_ides: Vec::new(),
+            ..Config::default()
         };
 
         config.save()?;

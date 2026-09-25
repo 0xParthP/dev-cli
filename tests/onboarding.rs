@@ -71,9 +71,11 @@ fn ensure_onboarded_returns_ok_when_config_missing_but_no_terminal() {
 fn ensure_onboarded_does_not_overwrite_existing_config() {
     with_temp_config(|| {
         let original = Config {
-            default_ide: Ide::Vscode,
+            default_ide: dev_cli::models::ide::IdeSelection::BuiltIn(Ide::Vscode),
             projects_root: vec![PathBuf::from("C:/OriginalProjects")],
             recent_projects: Vec::new(),
+            custom_ides: Vec::new(),
+            ..Config::default()
         };
 
         original.save().unwrap();
@@ -87,7 +89,7 @@ fn ensure_onboarded_does_not_overwrite_existing_config() {
         assert_eq!(before, after);
 
         let loaded = Config::load().unwrap();
-        assert_eq!(loaded.default_ide, Ide::Vscode);
+        assert_eq!(loaded.default_ide, dev_cli::models::ide::IdeSelection::BuiltIn(Ide::Vscode));
         assert_eq!(loaded.projects_root, vec![PathBuf::from("C:/OriginalProjects")]);
     });
 }

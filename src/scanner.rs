@@ -15,6 +15,16 @@ const IGNORED_DIRS: &[&str] =
 
 /// Discover every Git repository beneath one or more configured project roots.
 pub fn discover_projects(roots: &[PathBuf]) -> Result<Vec<Project>> {
+    let config = crate::config::Config::load().unwrap_or_default();
+    discover_projects_with_config(roots, Some(config.max_depth), &config.ignore_patterns)
+}
+
+/// Discover Git repositories with explicit max depth and ignore patterns settings.
+pub fn discover_projects_with_config(
+    roots: &[PathBuf],
+    max_depth: Option<usize>,
+    ignore_patterns: &[String],
+) -> Result<Vec<Project>> {
     let mut projects = Vec::new();
     let mut seen = HashSet::new();
 
@@ -23,7 +33,7 @@ pub fn discover_projects(roots: &[PathBuf]) -> Result<Vec<Project>> {
             continue;
         }
 
-        scan_root(root, &mut projects, &mut seen)?;
+        scan_root_opts(root, max_depth, ignore_patterns, &mut projects, &mut seen)?;
     }
 
     projects.sort_by(|a, b| a.name.cmp(&b.name));
@@ -31,16 +41,33 @@ pub fn discover_projects(roots: &[PathBuf]) -> Result<Vec<Project>> {
     Ok(projects)
 }
 
-/// Scan a single configured root for Git repositories.
-fn scan_root(root: &Path, projects: &mut Vec<Project>, seen: &mut HashSet<PathBuf>) -> Result<()> {
-    let walker = WalkBuilder::new(root)
-        .hidden(false)
-        .git_ignore(true)
-        .git_exclude(true)
-        .git_global(true)
-        .filter_entry(|entry| {
+/// Scan a single configured root for Git repositories with options.
+fn scan_root_opts(
+    root: &Path,
+    max_depth: Option<usize>,
+    ignore_patterns: &[String],
+    projects: &mut Vec<Project>,
+    seen: &mut HashSet<PathBuf>,
+) -> Result<()> {
+    let mut builder = WalkBuilder::new(root);
+    builder.hidden(false).git_ignore(true).git_exclude(true).git_global(true);
+
+    if let Some(depth) = max_depth {
+        builder.max_depth(Some(depth));
+    }
+
+    let extra_ignores: Vec<String> = ignore_patterns.to_vec();
+
+    let walker = builder
+        .filter_entry(move |entry| {
             let name = entry.file_name().to_string_lossy();
-            !IGNORED_DIRS.contains(&name.as_ref())
+            if IGNORED_DIRS.contains(&name.as_ref()) {
+                return false;
+            }
+            if extra_ignores.iter().any(|p| p.eq_ignore_ascii_case(&name)) {
+                return false;
+            }
+            true
         })
         .build();
 

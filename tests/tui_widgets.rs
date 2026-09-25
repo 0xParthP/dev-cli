@@ -38,7 +38,7 @@ fn header_renders() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     terminal.draw(|frame| {
-        header::render(frame, frame.area());
+        header::render(frame, frame.area(), dev_cli::tui::theme::get_palette("neon"));
     })?;
 
     Ok(())
@@ -52,7 +52,7 @@ fn search_renders() -> Result<()> {
     let state = AppState::new();
 
     terminal.draw(|frame| {
-        search::render(frame, frame.area(), &state);
+        search::render(frame, frame.area(), &state, state.palette());
     })?;
 
     Ok(())
@@ -66,7 +66,7 @@ fn project_list_renders() -> Result<()> {
     let state = AppState::new();
 
     terminal.draw(|frame| {
-        project_list::render(frame, frame.area(), &state);
+        project_list::render(frame, frame.area(), &state, state.palette());
     })?;
 
     Ok(())
@@ -83,7 +83,7 @@ fn project_list_renders_narrow() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     terminal.draw(|frame| {
-        project_list::render(frame, frame.area(), &state);
+        project_list::render(frame, frame.area(), &state, state.palette());
     })?;
 
     Ok(())
@@ -94,8 +94,9 @@ fn footer_renders() -> Result<()> {
     let backend = TestBackend::new(80, 2);
     let mut terminal = Terminal::new(backend)?;
 
+    let state = AppState::default();
     terminal.draw(|frame| {
-        footer::render(frame, frame.area());
+        footer::render(frame, frame.area(), &state, state.palette());
     })?;
 
     Ok(())
@@ -116,7 +117,7 @@ fn search_works() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     terminal.draw(|frame| {
-        search::render(frame, frame.area(), &state);
+        search::render(frame, frame.area(), &state, state.palette());
     })?;
 
     let text = terminal.backend().buffer().content();
@@ -145,7 +146,12 @@ fn selected_project_is_highlighted() -> Result<()> {
 
     let buffer = render_widget(
         |frame| {
-            project_list::render(frame, ratatui::layout::Rect::new(0, 0, 50, 16), &state);
+            project_list::render(
+                frame,
+                ratatui::layout::Rect::new(0, 0, 50, 16),
+                &state,
+                state.palette(),
+            );
         },
         50,
         16,
@@ -170,7 +176,7 @@ fn empty_search_state_renders_message() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     terminal.draw(|frame| {
-        project_list::render(frame, frame.area(), &state);
+        project_list::render(frame, frame.area(), &state, state.palette());
     })?;
 
     let rendered: String =
@@ -191,7 +197,7 @@ fn search_placeholder_renders() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     terminal.draw(|frame| {
-        search::render(frame, frame.area(), &state);
+        search::render(frame, frame.area(), &state, state.palette());
     })?;
 
     let rendered: String =
@@ -207,8 +213,9 @@ fn footer_contains_enter_shortcut() -> Result<()> {
     let backend = TestBackend::new(80, 2);
     let mut terminal = Terminal::new(backend)?;
 
+    let state = AppState::default();
     terminal.draw(|frame| {
-        footer::render(frame, frame.area());
+        footer::render(frame, frame.area(), &state, state.palette());
     })?;
 
     let rendered: String =
@@ -235,7 +242,7 @@ fn header_is_centered_and_contains_title() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     terminal.draw(|frame| {
-        header::render(frame, frame.area());
+        header::render(frame, frame.area(), dev_cli::tui::theme::get_palette("neon"));
     })?;
 
     let rendered: String =
@@ -257,7 +264,7 @@ fn tabs_render_projects_tab_selected() -> Result<()> {
     state.active_tab = Tab::Projects;
 
     terminal.draw(|frame| {
-        tabs::render(frame, frame.area(), &state);
+        tabs::render(frame, frame.area(), &state, state.palette());
     })?;
 
     let rendered: String =
@@ -281,7 +288,7 @@ fn tabs_render_settings_tab_selected() -> Result<()> {
     state.active_tab = Tab::Settings;
 
     terminal.draw(|frame| {
-        tabs::render(frame, frame.area(), &state);
+        tabs::render(frame, frame.area(), &state, state.palette());
     })?;
 
     let rendered: String =
@@ -297,8 +304,9 @@ fn footer_contains_all_shortcuts() -> Result<()> {
     let backend = TestBackend::new(80, 2);
     let mut terminal = Terminal::new(backend)?;
 
+    let state = AppState { active_tab: Tab::Projects, ..AppState::default() };
     terminal.draw(|frame| {
-        footer::render(frame, frame.area());
+        footer::render(frame, frame.area(), &state, state.palette());
     })?;
 
     let rendered: String =
@@ -315,6 +323,25 @@ fn footer_contains_all_shortcuts() -> Result<()> {
 }
 
 #[test]
+fn recent_footer_omits_refresh() -> Result<()> {
+    let backend = TestBackend::new(80, 2);
+    let mut terminal = Terminal::new(backend)?;
+
+    let state = AppState { active_tab: Tab::Recent, ..AppState::default() };
+    terminal.draw(|frame| {
+        footer::render(frame, frame.area(), &state, state.palette());
+    })?;
+
+    let rendered: String =
+        terminal.backend().buffer().content().iter().map(|c| c.symbol()).collect();
+
+    assert!(!rendered.contains("Refresh"));
+    assert!(!rendered.contains("F1"));
+
+    Ok(())
+}
+
+#[test]
 #[serial]
 fn non_projects_tab_shows_placeholder() -> Result<()> {
     let mut state = AppState::new();
@@ -324,7 +351,7 @@ fn non_projects_tab_shows_placeholder() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     terminal.draw(|frame| {
-        placeholder::render(frame, frame.area(), Tab::Ide);
+        placeholder::render(frame, frame.area(), Tab::Ide, state.palette());
     })?;
 
     let rendered: String =
@@ -344,7 +371,7 @@ fn recent_widget_renders_empty_state() -> Result<()> {
         let state = AppState::new();
 
         terminal.draw(|frame| {
-            recent::render(frame, frame.area(), &state);
+            recent::render(frame, frame.area(), &state, state.palette());
         })?;
 
         let rendered: String =
@@ -377,7 +404,7 @@ fn recent_widget_renders_project_name() -> Result<()> {
         state.load_recent_projects();
 
         terminal.draw(|frame| {
-            recent::render(frame, frame.area(), &state);
+            recent::render(frame, frame.area(), &state, state.palette());
         })?;
 
         let rendered: String =
@@ -412,7 +439,7 @@ fn recent_widget_renders_relative_timestamp() -> Result<()> {
         state.load_recent_projects();
 
         terminal.draw(|frame| {
-            recent::render(frame, frame.area(), &state);
+            recent::render(frame, frame.area(), &state, state.palette());
         })?;
 
         let rendered: String =
@@ -433,7 +460,7 @@ fn recent_tab_is_selected() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     terminal.draw(|frame| {
-        tabs::render(frame, frame.area(), &state);
+        tabs::render(frame, frame.area(), &state, state.palette());
     })?;
 
     let rendered: String =
@@ -452,13 +479,15 @@ fn recent_tab_renders_recent_widget() {
 
         Config {
             projects_root: vec![std::env::temp_dir()],
-            default_ide: Ide::Vscode,
+            default_ide: dev_cli::models::ide::IdeSelection::BuiltIn(Ide::Vscode),
             recent_projects: vec![RecentProject {
                 name: "weather-app".into(),
                 path: PathBuf::from("/projects/weather-app"),
                 last_opened: now,
                 ide: None,
             }],
+            custom_ides: Vec::new(),
+            ..Config::default()
         }
         .save()
         .unwrap();
@@ -469,7 +498,12 @@ fn recent_tab_renders_recent_widget() {
 
         let buffer = render_widget(
             |frame| {
-                recent::render(frame, ratatui::layout::Rect::new(0, 0, 60, 12), &state);
+                recent::render(
+                    frame,
+                    ratatui::layout::Rect::new(0, 0, 60, 12),
+                    &state,
+                    state.palette(),
+                );
             },
             60,
             12,

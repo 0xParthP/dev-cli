@@ -15,7 +15,7 @@ use crate::{
     models::recent_project::RecentProject,
     tui::{
         state::AppState,
-        theme,
+        theme::Palette,
         widgets::list::{Notice, render_centered_notice, render_list},
     },
     utils::path::display_path,
@@ -36,7 +36,7 @@ fn format_age(timestamp: u64) -> String {
 }
 
 /// Render the widget onto the given frame and area.
-pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
+pub fn render(frame: &mut Frame, area: Rect, state: &AppState, palette: Palette) {
     let recent_projects: &[RecentProject] = &state.recent_projects;
 
     let title = format!(" Recent Projects ({}) ", recent_projects.len());
@@ -48,10 +48,11 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
             Notice {
                 title: &title,
                 icon: "🕘",
-                icon_color: theme::MUTED,
+                icon_color: palette.muted,
                 heading: "No recent projects",
                 subtext: "Open a project from the Projects tab.",
             },
+            palette,
         );
         return;
     }
@@ -69,7 +70,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
             let line1_spacing = inner_width.saturating_sub(left_width + age_width);
 
             let ide = state.get_recent_project_ide(project);
-            let badge = format!("[{}]", ide.display_name());
+            let badge = format!("[{}]", ide.display_name(&state.custom_ides));
             let path_str = display_path(&project.path);
 
             let path_left = format!("   {}", path_str);
@@ -86,18 +87,20 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
                 Line::from(vec![
                     Span::styled(
                         left,
-                        Style::default().fg(theme::TEXT).add_modifier(Modifier::BOLD),
+                        Style::default().fg(palette.text).add_modifier(Modifier::BOLD),
                     ),
                     Span::raw(" ".repeat(line1_spacing)),
-                    Span::styled(age, Style::default().fg(theme::INFO)),
+                    Span::styled(age, Style::default().fg(palette.info)),
                 ]),
                 Line::from(vec![
                     Span::raw("   "),
-                    Span::styled(path_str, Style::default().fg(theme::MUTED)),
+                    Span::styled(path_str, Style::default().fg(palette.muted)),
                     Span::raw(" ".repeat(line2_spacing)),
                     Span::styled(
                         badge,
-                        Style::default().fg(ide.color()).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(ide.color(&state.custom_ides))
+                            .add_modifier(Modifier::BOLD),
                     ),
                 ]),
                 Line::default(),
@@ -107,5 +110,5 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
 
     let selected = state.selected_index.min(recent_projects.len().saturating_sub(1));
 
-    render_list(frame, area, title, items, Some(selected));
+    render_list(frame, area, title, items, Some(selected), palette);
 }

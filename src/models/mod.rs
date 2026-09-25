@@ -7,7 +7,9 @@
 //!
 //! - [`ide::Ide`] — Supported IDE type enum
 //! - [`project::Project`] — Discovered Git repository
+//! - [`custom_ide::CustomIde`] — User-configured custom IDE
 
+pub mod custom_ide;
 pub mod ide;
 pub mod project;
 pub mod recent_project;

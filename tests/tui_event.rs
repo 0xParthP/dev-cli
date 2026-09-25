@@ -141,6 +141,7 @@ fn typing_adds_character() {
 fn backspace_removes_character() {
     let mut state = AppState::new();
     state.search_query = "cursor".into();
+    state.search_cursor = state.search_query.chars().count();
 
     handle_key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE), &mut state);
 
@@ -164,8 +165,10 @@ fn open_project_calls_launcher() -> Result<()> {
         // Give the test its own isolated config.
         Config {
             projects_root: vec![std::env::temp_dir()],
-            default_ide: Ide::Vscode,
+            default_ide: dev_cli::models::ide::IdeSelection::BuiltIn(Ide::Vscode),
             recent_projects: Vec::new(),
+            custom_ides: Vec::new(),
+            ..Config::default()
         }
         .save()?;
 
@@ -180,7 +183,7 @@ fn open_project_calls_launcher() -> Result<()> {
 
         let (ide, path) = launched.expect("launcher should be called");
 
-        assert_eq!(ide, Ide::Vscode);
+        assert_eq!(ide, dev_cli::models::ide::IdeSelection::BuiltIn(Ide::Vscode));
         assert!(path.ends_with("demo"));
 
         Ok(())
@@ -414,13 +417,55 @@ fn tab_key_cycles_selected_project_ide() {
     state.installed_ides = vec![Ide::Cursor, Ide::Vscode, Ide::Claude];
     state.set_projects(vec![project("alpha")]);
     state.selected_index = 1;
-    state.default_ide = Ide::Cursor;
+    state.default_ide = dev_cli::models::ide::IdeSelection::BuiltIn(Ide::Cursor);
 
-    assert_eq!(state.get_project_ide(&state.filtered_projects()[0].path), Ide::Cursor);
+    assert_eq!(
+        state.get_project_ide(&state.filtered_projects()[0].path),
+        dev_cli::models::ide::IdeSelection::BuiltIn(Ide::Cursor)
+    );
 
     handle_key(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE), &mut state);
 
-    assert_eq!(state.get_project_ide(&state.filtered_projects()[0].path), Ide::Vscode);
+    assert_eq!(
+        state.get_project_ide(&state.filtered_projects()[0].path),
+        dev_cli::models::ide::IdeSelection::BuiltIn(Ide::Vscode)
+    );
+}
+
+#[test]
+#[serial]
+fn tab_key_cycles_includes_custom_ides() {
+    let mut state = AppState::new();
+    state.installed_ides = vec![Ide::Cursor];
+    state.custom_ides = vec![dev_cli::models::custom_ide::CustomIde {
+        id: "neovim".into(),
+        display_name: "Neovim".into(),
+        executable: std::path::PathBuf::from("nvim"),
+        args_template: None,
+        verified: true,
+    }];
+    state.set_projects(vec![project("alpha")]);
+    state.selected_index = 1;
+    state.default_ide = dev_cli::models::ide::IdeSelection::BuiltIn(Ide::Cursor);
+
+    assert_eq!(
+        state.get_project_ide(&state.filtered_projects()[0].path),
+        dev_cli::models::ide::IdeSelection::BuiltIn(Ide::Cursor)
+    );
+
+    // Cycle 1: Cursor -> Custom("neovim")
+    handle_key(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE), &mut state);
+    assert_eq!(
+        state.get_project_ide(&state.filtered_projects()[0].path),
+        dev_cli::models::ide::IdeSelection::Custom("neovim".into())
+    );
+
+    // Cycle 2: Custom("neovim") -> Cursor
+    handle_key(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE), &mut state);
+    assert_eq!(
+        state.get_project_ide(&state.filtered_projects()[0].path),
+        dev_cli::models::ide::IdeSelection::BuiltIn(Ide::Cursor)
+    );
 }
 
 #[test]
@@ -430,7 +475,7 @@ fn enter_key_launches_project_with_selected_ide() {
     state.installed_ides = vec![Ide::Cursor, Ide::Vscode, Ide::Claude];
     state.set_projects(vec![project("alpha")]);
     state.selected_index = 1;
-    state.default_ide = Ide::Cursor;
+    state.default_ide = dev_cli::models::ide::IdeSelection::BuiltIn(Ide::Cursor);
 
     // Cycle once to VS Code
     handle_key(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE), &mut state);
@@ -446,6 +491,44 @@ fn enter_key_launches_project_with_selected_ide() {
         },
     );
 
-    assert_eq!(*launched_ide.lock().unwrap(), Some(Ide::Vscode));
+    assert_eq!(
+        *launched_ide.lock().unwrap(),
+        Some(dev_cli::models::ide::IdeSelection::BuiltIn(Ide::Vscode))
+    );
     assert!(state.should_quit);
+}
+
+#[test]
+#[serial]
+fn text_cursor_navigation_and_editing() {
+    let mut state = AppState::new();
+
+    // Type "abcd"
+    for c in ['a', 'b', 'c', 'd'] {
+        handle_key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE), &mut state);
+    }
+    assert_eq!(state.search_query, "abcd");
+    assert_eq!(state.search_cursor, 4);
+
+    // Left arrow moves cursor to 3
+    handle_key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE), &mut state);
+    assert_eq!(state.search_cursor, 3);
+
+    // Insert 'x' at cursor 3 -> "abcxd"
+    handle_key(KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE), &mut state);
+    assert_eq!(state.search_query, "abcxd");
+    assert_eq!(state.search_cursor, 4);
+
+    // Home key moves cursor to 0
+    handle_key(KeyEvent::new(KeyCode::Home, KeyModifiers::NONE), &mut state);
+    assert_eq!(state.search_cursor, 0);
+
+    // Delete at cursor 0 removes 'a' -> "bcxd"
+    handle_key(KeyEvent::new(KeyCode::Delete, KeyModifiers::NONE), &mut state);
+    assert_eq!(state.search_query, "bcxd");
+    assert_eq!(state.search_cursor, 0);
+
+    // End key moves cursor to end (4)
+    handle_key(KeyEvent::new(KeyCode::End, KeyModifiers::NONE), &mut state);
+    assert_eq!(state.search_cursor, 4);
 }

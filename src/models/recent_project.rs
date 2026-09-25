@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::models::ide::Ide;
+use crate::models::ide::IdeSelection;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RecentProject {
@@ -19,5 +19,5 @@ pub struct RecentProject {
 
     /// Last IDE used to open the project.
     #[serde(default)]
-    pub ide: Option<Ide>,
+    pub ide: Option<IdeSelection>,
 }

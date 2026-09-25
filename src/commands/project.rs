@@ -63,11 +63,11 @@ fn open(args: OpenArgs) -> Result<()> {
         bail!("Project '{}' not found.", args.project);
     };
 
-    let ide = args.ide.unwrap_or(config.default_ide);
+    let ide = args.ide.unwrap_or_else(|| config.default_ide.clone());
 
-    launcher::launch(ide, &project.path)?;
+    launcher::launch_selection(&ide, &project.path, &config.custom_ides)?;
 
-    config.add_recent_project(&project);
+    config.add_recent_project_with_ide(&project, ide);
     config.save()?;
 
     println!("{} {}", "Opened".green(), project.path.display());

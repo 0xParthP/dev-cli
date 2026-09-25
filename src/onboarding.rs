@@ -78,7 +78,9 @@ pub fn run_onboarding() -> Result<()> {
         roots.push(PathBuf::from(next_root));
     }
 
-    Config { projects_root: roots, default_ide, recent_projects: Vec::new() }.save()?;
+    let config =
+        Config { projects_root: roots, default_ide: default_ide.into(), ..Config::default() };
+    config.save()?;
 
     outro("✨ Setup complete! You're ready to use dev-cli.")?;
 

@@ -92,6 +92,7 @@ fn pop_char_removes_last_character() {
     let mut state = AppState::new();
 
     state.search_query = "cursor".into();
+    state.search_cursor = state.search_query.chars().count();
 
     state.pop_char();
     state.pop_char();
@@ -181,55 +182,65 @@ fn refresh_reloads_projects_and_recents() {
 
 #[test]
 fn cycle_selected_ide_updates_override() {
+    use dev_cli::models::ide::IdeSelection;
     let mut state = AppState::new();
+    state.default_ide = IdeSelection::BuiltIn(Ide::Vscode);
+    state.custom_ides = Vec::new();
     state.installed_ides = vec![Ide::Vscode, Ide::Cursor, Ide::Claude];
     let p = project("demo");
     state.set_projects(vec![p.clone()]);
     state.selected_index = 1; // Highlight demo project under root
 
-    assert_eq!(state.get_project_ide(&p.path), Ide::Vscode);
+    assert_eq!(state.get_project_ide(&p.path), IdeSelection::BuiltIn(Ide::Vscode));
     state.cycle_selected_ide();
-    assert_eq!(state.get_project_ide(&p.path), Ide::Cursor);
+    assert_eq!(state.get_project_ide(&p.path), IdeSelection::BuiltIn(Ide::Cursor));
     state.cycle_selected_ide();
-    assert_eq!(state.get_project_ide(&p.path), Ide::Claude);
+    assert_eq!(state.get_project_ide(&p.path), IdeSelection::BuiltIn(Ide::Claude));
     state.cycle_selected_ide();
-    assert_eq!(state.get_project_ide(&p.path), Ide::Vscode);
+    assert_eq!(state.get_project_ide(&p.path), IdeSelection::BuiltIn(Ide::Vscode));
 }
 
 #[test]
 fn cycle_selected_ide_skips_uninstalled_ides() {
+    use dev_cli::models::ide::IdeSelection;
     let mut state = AppState::new();
+    state.default_ide = IdeSelection::BuiltIn(Ide::Vscode);
+    state.custom_ides = Vec::new();
     state.installed_ides = vec![Ide::Vscode, Ide::Terminal];
     let p = project("demo");
     state.set_projects(vec![p.clone()]);
     state.selected_index = 1;
 
-    assert_eq!(state.get_project_ide(&p.path), Ide::Vscode);
+    assert_eq!(state.get_project_ide(&p.path), IdeSelection::BuiltIn(Ide::Vscode));
 
     state.cycle_selected_ide();
-    assert_eq!(state.get_project_ide(&p.path), Ide::Terminal);
+    assert_eq!(state.get_project_ide(&p.path), IdeSelection::BuiltIn(Ide::Terminal));
 
     state.cycle_selected_ide();
-    assert_eq!(state.get_project_ide(&p.path), Ide::Vscode);
+    assert_eq!(state.get_project_ide(&p.path), IdeSelection::BuiltIn(Ide::Vscode));
 }
 
 #[test]
 fn get_project_ide_falls_back_to_first_installed_if_default_uninstalled() {
+    use dev_cli::models::ide::IdeSelection;
     let mut state = AppState::new();
-    state.default_ide = Ide::Idea;
+    state.custom_ides = Vec::new();
+    state.default_ide = IdeSelection::BuiltIn(Ide::Idea);
     state.installed_ides = vec![Ide::Cursor, Ide::Claude];
 
     let p = project("demo");
-    assert_eq!(state.get_project_ide(&p.path), Ide::Cursor);
+    assert_eq!(state.get_project_ide(&p.path), IdeSelection::BuiltIn(Ide::Cursor));
 }
 
 #[test]
 fn cycle_selected_ide_on_recent_tab() {
+    use dev_cli::models::ide::IdeSelection;
     use dev_cli::models::recent_project::RecentProject;
     use dev_cli::tui::state::Tab;
     use std::path::PathBuf;
 
     let mut state = AppState::new();
+    state.custom_ides = Vec::new();
     state.active_tab = Tab::Recent;
     state.installed_ides = vec![Ide::Vscode, Ide::Claude];
     let path = PathBuf::from("/tmp/recent_demo");
@@ -237,25 +248,35 @@ fn cycle_selected_ide_on_recent_tab() {
         name: "recent_demo".into(),
         path: path.clone(),
         last_opened: 100,
-        ide: Some(Ide::Vscode),
+        ide: Some(IdeSelection::BuiltIn(Ide::Vscode)),
     }];
 
-    assert_eq!(state.get_recent_project_ide(&state.recent_projects[0]), Ide::Vscode);
+    assert_eq!(
+        state.get_recent_project_ide(&state.recent_projects[0]),
+        IdeSelection::BuiltIn(Ide::Vscode)
+    );
 
     state.cycle_selected_ide();
-    assert_eq!(state.get_recent_project_ide(&state.recent_projects[0]), Ide::Claude);
+    assert_eq!(
+        state.get_recent_project_ide(&state.recent_projects[0]),
+        IdeSelection::BuiltIn(Ide::Claude)
+    );
 
     state.cycle_selected_ide();
-    assert_eq!(state.get_recent_project_ide(&state.recent_projects[0]), Ide::Vscode);
+    assert_eq!(
+        state.get_recent_project_ide(&state.recent_projects[0]),
+        IdeSelection::BuiltIn(Ide::Vscode)
+    );
 }
 
 #[test]
 fn projects_tab_uses_default_ide_not_recent_ide() {
+    use dev_cli::models::ide::IdeSelection;
     use dev_cli::models::recent_project::RecentProject;
     use std::path::PathBuf;
 
     let mut state = AppState::new();
-    state.default_ide = Ide::Vscode;
+    state.default_ide = IdeSelection::BuiltIn(Ide::Vscode);
     state.installed_ides = vec![Ide::Vscode, Ide::Claude];
 
     let path = PathBuf::from("/tmp/shared_demo");
@@ -263,13 +284,13 @@ fn projects_tab_uses_default_ide_not_recent_ide() {
         name: "shared_demo".into(),
         path: path.clone(),
         last_opened: 100,
-        ide: Some(Ide::Claude),
+        ide: Some(IdeSelection::BuiltIn(Ide::Claude)),
     };
     state.recent_projects = vec![recent.clone()];
 
     // Recent tab uses recent.ide (Claude)
-    assert_eq!(state.get_recent_project_ide(&recent), Ide::Claude);
+    assert_eq!(state.get_recent_project_ide(&recent), IdeSelection::BuiltIn(Ide::Claude));
 
     // Projects tab uses default_ide (VS Code), ignoring recent.ide
-    assert_eq!(state.get_project_ide(&path), Ide::Vscode);
+    assert_eq!(state.get_project_ide(&path), IdeSelection::BuiltIn(Ide::Vscode));
 }
