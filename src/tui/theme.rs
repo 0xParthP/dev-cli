@@ -71,85 +71,16 @@ fn from_rgb_list(name: &'static str, colors: &[(u8, u8, u8); 11]) -> Palette {
     }
 }
 
+#[rustfmt::skip]
 pub fn get_palette(theme_name: &str) -> Palette {
     match theme_name.to_lowercase().as_str() {
-        "cyberpunk" => from_rgb_list(
-            "Cyberpunk",
-            &[
-                (255, 0, 127),
-                (10, 5, 20),
-                (240, 240, 255),
-                (140, 100, 180),
-                (200, 0, 255),
-                (0, 255, 180),
-                (255, 200, 0),
-                (255, 50, 80),
-                (0, 220, 255),
-                (210, 80, 255),
-                (120, 0, 150),
-            ],
-        ),
-        "catppuccin" => from_rgb_list(
-            "Catppuccin",
-            &[
-                (137, 180, 250),
-                (30, 30, 46),
-                (205, 214, 244),
-                (147, 153, 178),
-                (88, 91, 112),
-                (166, 227, 161),
-                (249, 226, 175),
-                (243, 139, 168),
-                (148, 226, 213),
-                (203, 166, 247),
-                (69, 71, 90),
-            ],
-        ),
-        "monokai" => from_rgb_list(
-            "Monokai",
-            &[
-                (166, 226, 46),
-                (39, 40, 34),
-                (248, 248, 242),
-                (117, 113, 94),
-                (73, 72, 62),
-                (166, 226, 46),
-                (230, 219, 116),
-                (249, 38, 114),
-                (102, 217, 239),
-                (174, 129, 255),
-                (73, 72, 62),
-            ],
-        ),
-        "high-contrast" => from_rgb_list(
-            "High Contrast",
-            &[
-                (255, 255, 0),
-                (0, 0, 0),
-                (255, 255, 255),
-                (180, 180, 180),
-                (255, 255, 255),
-                (0, 255, 0),
-                (255, 255, 0),
-                (255, 0, 0),
-                (0, 255, 255),
-                (255, 0, 255),
-                (50, 50, 50),
-            ],
-        ),
+        "cyberpunk" => from_rgb_list("Cyberpunk", &[(255, 0, 127), (10, 5, 20), (240, 240, 255), (140, 100, 180), (200, 0, 255), (0, 255, 180), (255, 200, 0), (255, 50, 80), (0, 220, 255), (210, 80, 255), (120, 0, 150)]),
+        "catppuccin" => from_rgb_list("Catppuccin", &[(137, 180, 250), (30, 30, 46), (205, 214, 244), (147, 153, 178), (88, 91, 112), (166, 227, 161), (249, 226, 175), (243, 139, 168), (148, 226, 213), (203, 166, 247), (69, 71, 90)]),
+        "monokai" => from_rgb_list("Monokai", &[(166, 226, 46), (39, 40, 34), (248, 248, 242), (117, 113, 94), (73, 72, 62), (166, 226, 46), (230, 219, 116), (249, 38, 114), (102, 217, 239), (174, 129, 255), (73, 72, 62)]),
+        "high-contrast" => from_rgb_list("High Contrast", &[(255, 255, 0), (0, 0, 0), (255, 255, 255), (180, 180, 180), (255, 255, 255), (0, 255, 0), (255, 255, 0), (255, 0, 0), (0, 255, 255), (255, 0, 255), (50, 50, 50)]),
         _ => Palette {
-            name: "Neon Purple",
-            primary: PRIMARY,
-            background: BACKGROUND,
-            text: TEXT,
-            muted: MUTED,
-            border: BORDER,
-            success: SUCCESS,
-            warning: WARNING,
-            danger: DANGER,
-            info: INFO,
-            purple: PURPLE,
-            highlight_bg: HIGHLIGHT_BG,
+            name: "Neon Purple", primary: PRIMARY, background: BACKGROUND, text: TEXT, muted: MUTED,
+            border: BORDER, success: SUCCESS, warning: WARNING, danger: DANGER, info: INFO, purple: PURPLE, highlight_bg: HIGHLIGHT_BG,
         },
     }
 }

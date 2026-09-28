@@ -260,61 +260,24 @@ fn render_entry_row(
     spans
 }
 
-/// Render a built-in IDE entry.
+#[rustfmt::skip]
 fn render_installed_entry(
-    ide: crate::models::ide::Ide,
-    is_default: bool,
-    is_selected: bool,
-    available_width: usize,
-    palette: Palette,
+    ide: crate::models::ide::Ide, is_default: bool, is_selected: bool, available_width: usize, palette: Palette,
 ) -> ListItem<'static> {
-    let spans = render_entry_row(
-        ide.display_name(),
-        "✓ Detected",
-        palette.success,
-        None,
-        is_default,
-        is_selected,
-        available_width,
-        palette,
-    );
-
+    let spans = render_entry_row(ide.display_name(), "✓ Detected", palette.success, None, is_default, is_selected, available_width, palette);
     ListItem::new(vec![Line::from(spans), Line::default()])
 }
 
 /// Render a custom IDE entry.
+#[rustfmt::skip]
 fn render_custom_entry(
-    custom: &CustomIde,
-    is_default: bool,
-    is_selected: bool,
-    available_width: usize,
-    palette: Palette,
+    custom: &CustomIde, is_default: bool, is_selected: bool, available_width: usize, palette: Palette,
 ) -> ListItem<'static> {
-    let (status_text, status_color) = if custom.verified {
-        ("✓ Verified", palette.success)
-    } else {
-        ("✗ Unverified", palette.warning)
-    };
-    let spans = render_entry_row(
-        &custom.display_name,
-        status_text,
-        status_color,
-        Some("(custom)"),
-        is_default,
-        is_selected,
-        available_width,
-        palette,
-    );
-
+    let (status_text, status_color) = if custom.verified { ("✓ Verified", palette.success) } else { ("✗ Unverified", palette.warning) };
+    let spans = render_entry_row(&custom.display_name, status_text, status_color, Some("(custom)"), is_default, is_selected, available_width, palette);
     ListItem::new(vec![
         Line::from(spans),
-        Line::from(vec![
-            Span::raw("    "),
-            Span::styled(
-                custom.executable.display().to_string(),
-                Style::default().fg(palette.muted),
-            ),
-        ]),
+        Line::from(vec![Span::raw("    "), Span::styled(custom.executable.display().to_string(), Style::default().fg(palette.muted))]),
         Line::default(),
     ])
 }
