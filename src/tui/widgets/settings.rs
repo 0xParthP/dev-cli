@@ -202,24 +202,13 @@ fn render_add_root_form(frame: &mut Frame, area: Rect, state: &AppState, palette
     let is_editing = state.input_mode == InputMode::Editing;
 
     let mut line_path_spans = vec![Span::styled("   Path:  ", Style::default().fg(palette.info))];
-
-    if is_editing {
-        let (before, cursor_char, after) = crate::tui::widgets::list::split_at_cursor(
-            &state.settings_add_root,
-            state.settings_add_root_cursor,
-        );
-        line_path_spans.push(Span::styled(before, Style::default().fg(palette.text)));
-        line_path_spans.push(Span::styled(
-            cursor_char,
-            Style::default().bg(palette.primary).fg(palette.background),
-        ));
-        line_path_spans.push(Span::styled(after, Style::default().fg(palette.text)));
-    } else {
-        line_path_spans.push(Span::styled(
-            state.settings_add_root.clone(),
-            Style::default().fg(palette.muted),
-        ));
-    }
+    line_path_spans.extend(crate::tui::widgets::list::render_field_spans(
+        &state.settings_add_root,
+        state.settings_add_root_cursor,
+        true,
+        is_editing,
+        palette,
+    ));
 
     let mut lines = vec![Line::from(""), Line::from(line_path_spans)];
     crate::tui::widgets::list::append_form_footer(

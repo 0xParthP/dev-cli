@@ -286,46 +286,35 @@ fn render_custom_entry(
 fn render_add_form(frame: &mut Frame, area: Rect, state: &AppState, palette: Palette) {
     let is_editing = state.input_mode == InputMode::Editing;
 
-    let render_field_spans = |val: &str, cursor_pos: usize, is_active: bool| -> Vec<Span> {
-        if is_active && is_editing {
-            let (before, cursor_char, after) =
-                crate::tui::widgets::list::split_at_cursor(val, cursor_pos);
-            vec![
-                Span::styled(before.to_string(), Style::default().fg(palette.text)),
-                Span::styled(
-                    cursor_char.to_string(),
-                    Style::default().bg(palette.primary).fg(palette.background),
-                ),
-                Span::styled(after.to_string(), Style::default().fg(palette.text)),
-            ]
-        } else {
-            vec![Span::styled(val.to_string(), Style::default().fg(palette.muted))]
-        }
-    };
-
     let name_active = state.ide_form_field == 0;
     let path_active = state.ide_form_field == 1;
     let args_active = state.ide_form_field == 2;
 
     let mut line_name = vec![Span::styled("   Name:  ", Style::default().fg(palette.info))];
-    line_name.extend(render_field_spans(
+    line_name.extend(crate::tui::widgets::list::render_field_spans(
         &state.ide_form_name,
         state.ide_form_name_cursor,
         name_active,
+        is_editing,
+        palette,
     ));
 
     let mut line_path = vec![Span::styled("   Path:  ", Style::default().fg(palette.info))];
-    line_path.extend(render_field_spans(
+    line_path.extend(crate::tui::widgets::list::render_field_spans(
         &state.ide_form_path,
         state.ide_form_path_cursor,
         path_active,
+        is_editing,
+        palette,
     ));
 
     let mut line_args = vec![Span::styled("   Args:  ", Style::default().fg(palette.info))];
-    line_args.extend(render_field_spans(
+    line_args.extend(crate::tui::widgets::list::render_field_spans(
         &state.ide_form_args,
         state.ide_form_args_cursor,
         args_active,
+        is_editing,
+        palette,
     ));
 
     let mut lines =

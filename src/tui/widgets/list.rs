@@ -125,3 +125,26 @@ pub fn append_form_footer<'a>(
         )));
     }
 }
+
+/// Helper to render spans for an editable form input field with active cursor highlighting.
+pub fn render_field_spans<'a>(
+    val: &'a str,
+    cursor_pos: usize,
+    is_active: bool,
+    is_editing: bool,
+    palette: Palette,
+) -> Vec<Span<'a>> {
+    if is_active && is_editing {
+        let (before, cursor_char, after) = split_at_cursor(val, cursor_pos);
+        vec![
+            Span::styled(before.to_string(), Style::default().fg(palette.text)),
+            Span::styled(
+                cursor_char.to_string(),
+                Style::default().bg(palette.primary).fg(palette.background),
+            ),
+            Span::styled(after.to_string(), Style::default().fg(palette.text)),
+        ]
+    } else {
+        vec![Span::styled(val.to_string(), Style::default().fg(palette.muted))]
+    }
+}
