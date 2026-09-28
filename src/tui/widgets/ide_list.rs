@@ -210,49 +210,30 @@ fn build_custom_ide_items(
     }
 }
 
-/// Helper to render common entry row spans for IDE list items.
 #[allow(clippy::too_many_arguments)]
+#[rustfmt::skip]
 fn render_entry_row(
-    left_name: &str,
-    status_text: &str,
-    status_color: ratatui::style::Color,
-    extra_tag: Option<&str>,
-    is_default: bool,
-    is_selected: bool,
-    available_width: usize,
-    palette: Palette,
+    left_name: &str, status_text: &str, status_color: ratatui::style::Color, extra_tag: Option<&str>,
+    is_default: bool, is_selected: bool, available_width: usize, palette: Palette,
 ) -> Vec<Span<'static>> {
     let prefix = if is_selected { "❯ " } else { "  " };
     let tag_len = extra_tag.map_or(0, |t| unicode_width::UnicodeWidthStr::width(t) + 2);
-    let right_len = unicode_width::UnicodeWidthStr::width(status_text)
-        + tag_len
-        + if is_default { 11 } else { 0 };
+    let right_len = unicode_width::UnicodeWidthStr::width(status_text) + tag_len + if is_default { 11 } else { 0 };
     let left_len = unicode_width::UnicodeWidthStr::width(left_name);
     let spacing = available_width.saturating_sub(2 + left_len + right_len);
 
+    let p_style = if is_selected { Style::default().fg(palette.primary).add_modifier(Modifier::BOLD) } else { Style::default().fg(palette.muted) };
+    let l_style = Style::default().fg(palette.text).add_modifier(Modifier::BOLD);
+
     let mut spans = vec![
-        Span::styled(
-            prefix.to_string(),
-            if is_selected {
-                Style::default().fg(palette.primary).add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(palette.muted)
-            },
-        ),
-        Span::styled(
-            left_name.to_string(),
-            Style::default().fg(palette.text).add_modifier(Modifier::BOLD),
-        ),
+        Span::styled(prefix.to_string(), p_style),
+        Span::styled(left_name.to_string(), l_style),
         Span::raw(" ".repeat(spacing)),
     ];
 
     if is_default {
-        spans.push(Span::styled(
-            "★ DEFAULT  ".to_string(),
-            Style::default().fg(palette.primary).add_modifier(Modifier::BOLD),
-        ));
+        spans.push(Span::styled("★ DEFAULT  ".to_string(), Style::default().fg(palette.primary).add_modifier(Modifier::BOLD)));
     }
-
     spans.push(Span::styled(status_text.to_string(), Style::default().fg(status_color)));
     if let Some(tag) = extra_tag {
         spans.push(Span::styled(format!("  {}", tag), Style::default().fg(palette.muted)));
