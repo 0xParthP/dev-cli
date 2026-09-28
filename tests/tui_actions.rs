@@ -3,7 +3,11 @@ use serial_test::serial;
 use temp_env::with_var;
 use tempfile::TempDir;
 
-use dev_cli::{config::Config, models::ide::Ide, tui::actions::open_project_with};
+use dev_cli::{
+    config::Config,
+    models::ide::{Ide, IdeSelection},
+    tui::actions::open_project_with,
+};
 
 mod common;
 use common::factories::fake_project as project;
@@ -20,8 +24,14 @@ where
 #[serial]
 fn open_project_uses_default_ide() -> Result<()> {
     with_temp_config(|| -> Result<()> {
-        Config { projects_root: vec![], default_ide: Ide::Vscode, recent_projects: Vec::new() }
-            .save()?;
+        Config {
+            projects_root: vec![],
+            default_ide: IdeSelection::BuiltIn(Ide::Vscode),
+            recent_projects: Vec::new(),
+            custom_ides: Vec::new(),
+            ..Config::default()
+        }
+        .save()?;
 
         let project = project("demo");
 
@@ -29,7 +39,7 @@ fn open_project_uses_default_ide() -> Result<()> {
 
         open_project_with(&project, |ide, path| {
             called = true;
-            assert_eq!(ide, Ide::Vscode);
+            assert_eq!(ide, IdeSelection::BuiltIn(Ide::Vscode));
             assert_eq!(path, &project.path);
             Ok(())
         })?;
@@ -43,8 +53,14 @@ fn open_project_uses_default_ide() -> Result<()> {
 #[serial]
 fn open_project_propagates_launcher_error() -> Result<()> {
     with_temp_config(|| -> Result<()> {
-        Config { projects_root: vec![], default_ide: Ide::Vscode, recent_projects: Vec::new() }
-            .save()?;
+        Config {
+            projects_root: vec![],
+            default_ide: IdeSelection::BuiltIn(Ide::Vscode),
+            recent_projects: Vec::new(),
+            custom_ides: Vec::new(),
+            ..Config::default()
+        }
+        .save()?;
 
         let project = project("demo");
 

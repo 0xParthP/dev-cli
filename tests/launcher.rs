@@ -41,51 +41,63 @@ where
     fs::create_dir_all(&bin_dir).unwrap();
 
     // .bat has been used instead of .exe to prevent Windows defender/smartscreen flagging and breaking tests.
-    let exe_name = match ide {
+    let exe_names: Vec<&str> = match ide {
         Ide::Cursor => {
             if cfg!(windows) {
-                "cursor.bat"
+                vec!["cursor.bat"]
             } else {
-                "cursor"
+                vec!["cursor"]
             }
         }
         Ide::Claude => {
             if cfg!(windows) {
-                "claude.bat"
+                vec!["claude.bat"]
             } else {
-                "claude"
+                vec!["claude"]
             }
         }
         Ide::Terminal => {
             if cfg!(windows) {
-                "wt.bat"
+                vec!["wt.bat", "cmd.exe", "powershell.exe"]
             } else {
-                "wt"
+                vec![
+                    "gnome-terminal",
+                    "konsole",
+                    "alacritty",
+                    "kitty",
+                    "wezterm",
+                    "xterm",
+                    "x-terminal-emulator",
+                    "open",
+                    "wt",
+                ]
             }
         }
         _ => {
             if cfg!(windows) {
-                "code.bat"
+                vec!["code.bat"]
             } else {
-                "code"
+                vec!["code"]
             }
         }
     };
 
-    let path = bin_dir.join(exe_name);
+    for exe_name in exe_names {
+        let path = bin_dir.join(exe_name);
 
-    if cfg!(windows) {
-        fs::write(&path, "@echo off\r\nexit /b 0\r\n").unwrap();
-    } else {
-        let script_content = "#!/bin/sh\nexit 0\n";
-        fs::write(&path, script_content).unwrap();
+        if cfg!(windows) {
+            fs::write(&path, "@echo off\r\nexit /b 0\r\n").unwrap();
+        } else {
+            let script_content = "#!/bin/sh\nexit 0\n";
+            fs::write(&path, script_content).unwrap();
 
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = fs::metadata(&path).unwrap().permissions();
-            perms.set_mode(0o755);
-            fs::set_permissions(&path, perms).unwrap();
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let mut perms = fs::metadata(&path).unwrap().permissions();
+                perms.set_mode(0o755);
+                fs::set_permissions(&path, perms).unwrap();
+            }
         }
     }
 
@@ -161,6 +173,15 @@ fn launch_idea_not_installed_returns_error() {
 fn launch_spawn_claude() {
     let executable = fake_executable();
     let result = launcher::launch_spawn(Ide::Claude, Path::new("."), Path::new(&executable));
+    assert!(result.is_ok());
+}
+
+#[test]
+#[serial]
+fn launch_spawn_antigravity_cli() {
+    let executable = fake_executable();
+    let result =
+        launcher::launch_spawn(Ide::AntigravityCli, Path::new("."), Path::new(&executable));
     assert!(result.is_ok());
 }
 

@@ -1,8 +1,10 @@
 pub mod footer;
 pub mod header;
+pub mod ide_list;
 pub mod list;
 pub mod placeholder;
 pub mod project_list;
 pub mod recent;
 pub mod search;
+pub mod settings;
 pub mod tabs;

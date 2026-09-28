@@ -1,6 +1,4 @@
-//! CLI argument parsing using Clap derive macros.
-
-use crate::models::ide::Ide;
+use crate::models::ide::IdeSelection;
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser)]
@@ -39,7 +37,7 @@ pub struct OpenArgs {
 
     /// IDE to use for opening (overrides config default).
     #[arg(short, long)]
-    pub ide: Option<Ide>,
+    pub ide: Option<IdeSelection>,
 }
 
 /// Subcommands for `dev project`.
@@ -72,7 +70,7 @@ pub enum ConfigSubcommand {
     /// Set the default IDE to use when opening projects.
     SetDefaultIde {
         /// The IDE to set as default.
-        ide: Ide,
+        ide: IdeSelection,
     },
 }
 

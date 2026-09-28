@@ -10,11 +10,11 @@ use ratatui::{
 
 use crate::tui::{
     state::{AppState, Tab},
-    theme,
+    theme::Palette,
 };
 
 /// Render the widget onto the given frame and area.
-pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
+pub fn render(frame: &mut Frame, area: Rect, state: &AppState, palette: Palette) {
     let titles = [
         Line::from(" Recent "),
         Line::from(" Projects "),
@@ -31,9 +31,12 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
 
     let tabs = Tabs::new(titles)
         .select(selected)
-        .style(Style::default().fg(theme::MUTED))
+        .style(Style::default().fg(palette.muted))
         .highlight_style(
-            Style::default().fg(theme::BACKGROUND).bg(theme::PRIMARY).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(palette.background)
+                .bg(palette.primary)
+                .add_modifier(Modifier::BOLD),
         )
         .divider(" ");
 

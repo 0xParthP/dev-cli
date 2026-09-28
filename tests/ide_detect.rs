@@ -80,6 +80,48 @@ fn cursor_not_added_twice() {
 }
 
 #[test]
+fn detects_antigravity_cli_in_macos_location() {
+    use dev_cli::ide::detect::detect_common_macos_locations_in;
+    let dir = TempDir::new().unwrap();
+    let home = dir.path();
+    let exe = home.join(".antigravity/bin/agy");
+    fs::create_dir_all(exe.parent().unwrap()).unwrap();
+    fs::write(&exe, "").unwrap();
+
+    let mut list = Vec::new();
+    detect_common_macos_locations_in(&mut list, home);
+    assert!(list.iter().any(|i| i.ide == Ide::AntigravityCli));
+}
+
+#[test]
+fn detects_antigravity_gui_in_macos_location() {
+    use dev_cli::ide::detect::detect_common_macos_locations_in;
+    let dir = TempDir::new().unwrap();
+    let home = dir.path();
+    let exe = home.join("Applications/Antigravity.app/Contents/Resources/app/bin/antigravity");
+    fs::create_dir_all(exe.parent().unwrap()).unwrap();
+    fs::write(&exe, "").unwrap();
+
+    let mut list = Vec::new();
+    detect_common_macos_locations_in(&mut list, home);
+    assert!(list.iter().any(|i| i.ide == Ide::Antigravity));
+}
+
+#[test]
+fn detects_antigravity_cli_in_linux_location() {
+    use dev_cli::ide::detect::detect_common_linux_locations_in;
+    let dir = TempDir::new().unwrap();
+    let home = dir.path();
+    let exe = home.join(".antigravity/bin/antigravity");
+    fs::create_dir_all(exe.parent().unwrap()).unwrap();
+    fs::write(&exe, "").unwrap();
+
+    let mut list = Vec::new();
+    detect_common_linux_locations_in(&mut list, home);
+    assert!(list.iter().any(|i| i.ide == Ide::AntigravityCli));
+}
+
+#[test]
 fn detect_ides_runs_without_panic() {
     let ides = dev_cli::ide::detect::detect_ides();
     let _ = ides;

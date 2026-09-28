@@ -176,7 +176,7 @@ fn repeated_draw_calls_are_safe() -> Result<()> {
 
 #[test]
 fn test_process_pending_launch_none_and_some() {
-    use dev_cli::models::ide::Ide;
+    use dev_cli::models::ide::{Ide, IdeSelection};
     use dev_cli::tui::app::process_pending_launch;
 
     let mut state = AppState::new();
@@ -185,6 +185,6 @@ fn test_process_pending_launch_none_and_some() {
 
     // Test with Some
     let proj = common::factories::fake_project("test-proj");
-    state.pending_launch = Some((Ide::Claude, proj));
+    state.pending_launch = Some((IdeSelection::BuiltIn(Ide::Claude), proj));
     process_pending_launch(&state);
 }

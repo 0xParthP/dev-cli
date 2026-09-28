@@ -40,8 +40,11 @@ pub fn run() -> Result<()> {
 
 /// Process any pending IDE launch requested before app exit.
 pub fn process_pending_launch(state: &AppState) {
-    if let Some((ide, ref project)) = state.pending_launch {
-        let _ = super::actions::open_project_with_ide(project, ide, crate::ide::launcher::launch);
+    if let Some((ref ide, ref project)) = state.pending_launch {
+        let custom_ides = state.custom_ides.clone();
+        let _ = super::actions::open_project_with_ide(project, ide.clone(), |selection, path| {
+            crate::ide::launcher::launch_selection(&selection, path, &custom_ides)
+        });
     }
 }
 

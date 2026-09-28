@@ -1,5 +1,9 @@
 use anyhow::Result;
-use dev_cli::{config::Config, models::ide::Ide, tui::data::load_projects};
+use dev_cli::{
+    config::Config,
+    models::ide::{Ide, IdeSelection},
+    tui::data::load_projects,
+};
 use serial_test::serial;
 use temp_env::with_var;
 use tempfile::TempDir;
@@ -24,8 +28,10 @@ fn load_projects_discovers_git_repository() -> Result<()> {
 
         let config = Config {
             projects_root: vec![root.path().to_path_buf()],
-            default_ide: Ide::Vscode,
+            default_ide: IdeSelection::BuiltIn(Ide::Vscode),
             recent_projects: Vec::new(),
+            custom_ides: Vec::new(),
+            ..Config::default()
         };
 
         config.save()?;
@@ -47,8 +53,10 @@ fn load_projects_returns_empty_when_root_has_no_git_repos() -> Result<()> {
 
         let config = Config {
             projects_root: vec![root.path().to_path_buf()],
-            default_ide: Ide::Vscode,
+            default_ide: IdeSelection::BuiltIn(Ide::Vscode),
             recent_projects: Vec::new(),
+            custom_ides: Vec::new(),
+            ..Config::default()
         };
 
         config.save()?;

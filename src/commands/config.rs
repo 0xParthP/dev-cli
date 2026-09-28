@@ -8,18 +8,29 @@ use crate::{
     config::Config,
 };
 
+use crate::models::ide::IdeSelection;
+
 /// Execute a configuration command.
 pub fn execute(cmd: ConfigCommand) -> Result<()> {
     match cmd.command {
         ConfigSubcommand::Init => init(),
         ConfigSubcommand::Show => show(),
         ConfigSubcommand::SetDefaultIde { ide } => {
-            let detected = crate::ide::detect::detect_ides();
-            if !detected.iter().any(|i| i.ide == ide) {
-                anyhow::bail!("IDE '{:?}' is not installed on your system.", ide);
+            let mut config = Config::load()?;
+            match &ide {
+                IdeSelection::BuiltIn(b) => {
+                    let detected = crate::ide::detect::detect_ides();
+                    if !detected.iter().any(|i| i.ide == *b) {
+                        anyhow::bail!("IDE '{:?}' is not installed on your system.", b);
+                    }
+                }
+                IdeSelection::Custom(id) => {
+                    if !config.custom_ides.iter().any(|c| c.id == *id) {
+                        anyhow::bail!("Custom IDE '{}' is not configured.", id);
+                    }
+                }
             }
 
-            let mut config = Config::load()?;
             config.default_ide = ide;
             config.save()?;
 

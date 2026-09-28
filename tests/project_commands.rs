@@ -79,33 +79,61 @@ fn run_open_test(ide: &str) {
     let bin_dir = temp.root().join("bin");
     std::fs::create_dir_all(&bin_dir).ok();
 
-    #[cfg(windows)]
-    let exe = match ide {
-        "cursor" => "cursor.bat",
-        "terminal" => "wt.bat",
-        "claude" => "claude.bat",
-        _ => "code.bat",
-    };
-    #[cfg(not(windows))]
-    let exe = match ide {
-        "cursor" => "cursor",
-        "terminal" => "wt",
-        "claude" => "claude",
-        _ => "code",
+    let exe_names: Vec<&str> = match ide {
+        "cursor" => {
+            if cfg!(windows) {
+                vec!["cursor.bat"]
+            } else {
+                vec!["cursor"]
+            }
+        }
+        "terminal" => {
+            if cfg!(windows) {
+                vec!["wt.bat", "cmd.exe", "powershell.exe"]
+            } else {
+                vec![
+                    "gnome-terminal",
+                    "konsole",
+                    "alacritty",
+                    "kitty",
+                    "wezterm",
+                    "xterm",
+                    "x-terminal-emulator",
+                    "open",
+                    "wt",
+                ]
+            }
+        }
+        "claude" => {
+            if cfg!(windows) {
+                vec!["claude.bat"]
+            } else {
+                vec!["claude"]
+            }
+        }
+        _ => {
+            if cfg!(windows) {
+                vec!["code.bat"]
+            } else {
+                vec!["code"]
+            }
+        }
     };
 
-    let exe_path = bin_dir.join(exe);
-    if cfg!(windows) {
-        std::fs::write(&exe_path, "@echo off\r\nexit /b 0\r\n").ok();
-    } else {
-        std::fs::write(&exe_path, "#!/bin/sh\nexit 0\n").ok();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            if let Ok(meta) = std::fs::metadata(&exe_path) {
-                let mut perms = meta.permissions();
-                perms.set_mode(0o755);
-                let _ = std::fs::set_permissions(&exe_path, perms);
+    for exe in exe_names {
+        let exe_path = bin_dir.join(exe);
+        if cfg!(windows) {
+            std::fs::write(&exe_path, "@echo off\r\nexit /b 0\r\n").ok();
+        } else {
+            std::fs::write(&exe_path, "#!/bin/sh\nexit 0\n").ok();
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                if let Ok(meta) = std::fs::metadata(&exe_path) {
+                    let mut perms = meta.permissions();
+                    perms.set_mode(0o755);
+                    let _ = std::fs::set_permissions(&exe_path, perms);
+                }
             }
         }
     }
