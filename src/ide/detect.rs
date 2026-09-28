@@ -207,15 +207,7 @@ pub fn detect_common_macos_locations_in(list: &mut Vec<InstalledIde>, home: &Pat
     ];
 
     for (ide, name, paths) in &macos_cli_tools {
-        if list.iter().any(|i| i.ide == *ide) {
-            continue;
-        }
-        for path in paths {
-            if path.exists() {
-                list.push(InstalledIde::new(*ide, name, path.clone()));
-                break;
-            }
-        }
+        detect_first_existing(list, *ide, name, paths);
     }
 }
 
@@ -320,15 +312,7 @@ pub fn detect_common_linux_locations_in(list: &mut Vec<InstalledIde>, home: &Pat
     ];
 
     for (ide, name, paths) in &linux_bins {
-        if list.iter().any(|i| i.ide == *ide) {
-            continue;
-        }
-        for candidate in paths {
-            if candidate.exists() {
-                list.push(InstalledIde::new(*ide, name, candidate.clone()));
-                break;
-            }
-        }
+        detect_first_existing(list, *ide, name, paths);
     }
 
     let jb_tools = [
@@ -342,31 +326,7 @@ pub fn detect_common_linux_locations_in(list: &mut Vec<InstalledIde>, home: &Pat
     ];
 
     let jb_toolbox_apps = home.join(".local/share/JetBrains/Toolbox/apps");
-    if jb_toolbox_apps.is_dir() {
-        for (ide, name, exe_name, tb_names) in &jb_tools {
-            if list.iter().any(|i| i.ide == *ide) {
-                continue;
-            }
-            for tb_name in *tb_names {
-                let tool_dir = jb_toolbox_apps.join(tb_name);
-                if tool_dir.is_dir()
-                    && let Ok(channels) = std::fs::read_dir(&tool_dir)
-                {
-                    for channel in channels.flatten() {
-                        if let Ok(builds) = std::fs::read_dir(channel.path()) {
-                            for build in builds.flatten() {
-                                let candidate = build.path().join("bin").join(exe_name);
-                                if candidate.exists() {
-                                    list.push(InstalledIde::new(*ide, name, candidate));
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    scan_jetbrains_toolbox(list, &jb_toolbox_apps, &jb_tools);
 }
 
 /// Check common Windows installation directories under a given home directory.
@@ -402,117 +362,102 @@ pub fn detect_common_windows_locations_in(list: &mut Vec<InstalledIde>, home: &P
     }
 
     // Antigravity (GUI IDE)
-    let agy_gui_paths = [
-        home.join("AppData/Local/Programs/Antigravity/Antigravity.exe"),
-        pf_roots[0].join("Antigravity/Antigravity.exe"),
-    ];
-    for agy in &agy_gui_paths {
-        if agy.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Antigravity)) {
-            list.push(InstalledIde::new(Ide::Antigravity, "Antigravity", agy.clone()));
-            break;
-        }
-    }
+    detect_first_existing(
+        list,
+        Ide::Antigravity,
+        "Antigravity",
+        &[
+            home.join("AppData/Local/Programs/Antigravity/Antigravity.exe"),
+            pf_roots[0].join("Antigravity/Antigravity.exe"),
+        ],
+    );
 
     // Antigravity CLI
-    let agy_cli_paths = [
-        home.join("AppData/Local/Programs/Antigravity/bin/agy.cmd"),
-        home.join(".antigravity/bin/agy.exe"),
-        home.join(".antigravity/bin/antigravity.exe"),
-    ];
-    for agy in &agy_cli_paths {
-        if agy.exists() && !list.iter().any(|i| matches!(i.ide, Ide::AntigravityCli)) {
-            list.push(InstalledIde::new(Ide::AntigravityCli, "Antigravity CLI", agy.clone()));
-            break;
-        }
-    }
+    detect_first_existing(
+        list,
+        Ide::AntigravityCli,
+        "Antigravity CLI",
+        &[
+            home.join("AppData/Local/Programs/Antigravity/bin/agy.cmd"),
+            home.join(".antigravity/bin/agy.exe"),
+            home.join(".antigravity/bin/antigravity.exe"),
+        ],
+    );
 
     // VS Code: Standard Windows User & System installation paths
-    let vscode_paths = [
-        home.join("AppData/Local/Programs/Microsoft VS Code/bin/code.cmd"),
-        home.join("AppData/Local/Programs/Microsoft VS Code/Code.exe"),
-        pf_roots[0].join("Microsoft VS Code/bin/code.cmd"),
-        pf_roots[0].join("Microsoft VS Code/Code.exe"),
-    ];
-    for vscode in &vscode_paths {
-        if vscode.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Vscode)) {
-            list.push(InstalledIde::new(Ide::Vscode, "VS Code", vscode.clone()));
-            break;
-        }
-    }
+    detect_first_existing(
+        list,
+        Ide::Vscode,
+        "VS Code",
+        &[
+            home.join("AppData/Local/Programs/Microsoft VS Code/bin/code.cmd"),
+            home.join("AppData/Local/Programs/Microsoft VS Code/Code.exe"),
+            pf_roots[0].join("Microsoft VS Code/bin/code.cmd"),
+            pf_roots[0].join("Microsoft VS Code/Code.exe"),
+        ],
+    );
 
     // Cursor: Standard Windows installation path
-    let cursor_paths = [
-        home.join("AppData/Local/Programs/Cursor/Cursor.exe"),
-        pf_roots[0].join("Cursor/Cursor.exe"),
-    ];
-    for cursor in &cursor_paths {
-        if cursor.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Cursor)) {
-            list.push(InstalledIde::new(Ide::Cursor, "Cursor", cursor.clone()));
-            break;
-        }
-    }
+    detect_first_existing(
+        list,
+        Ide::Cursor,
+        "Cursor",
+        &[
+            home.join("AppData/Local/Programs/Cursor/Cursor.exe"),
+            pf_roots[0].join("Cursor/Cursor.exe"),
+        ],
+    );
 
     // Windsurf: Standard Windows installation path
-    let windsurf_paths = [
-        home.join("AppData/Local/Programs/Windsurf/Windsurf.exe"),
-        home.join("AppData/Local/Programs/Windsurf/bin/windsurf.cmd"),
-    ];
-    for ws in &windsurf_paths {
-        if ws.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Windsurf)) {
-            list.push(InstalledIde::new(Ide::Windsurf, "Windsurf", ws.clone()));
-            break;
-        }
-    }
+    detect_first_existing(
+        list,
+        Ide::Windsurf,
+        "Windsurf",
+        &[
+            home.join("AppData/Local/Programs/Windsurf/Windsurf.exe"),
+            home.join("AppData/Local/Programs/Windsurf/bin/windsurf.cmd"),
+        ],
+    );
 
     // Claude Code: ~/.local/bin location
-    let claude = home.join(".local/bin/claude.exe");
-    if claude.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Claude)) {
-        list.push(InstalledIde::new(Ide::Claude, "Claude Code", claude));
-    }
+    detect_first_existing(list, Ide::Claude, "Claude Code", &[home.join(".local/bin/claude.exe")]);
 
     // Zed: Standard Windows AppData installation path
-    let zed = home.join("AppData/Local/Programs/Zed/Zed.exe");
-    if zed.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Zed)) {
-        list.push(InstalledIde::new(Ide::Zed, "Zed", zed));
-    }
+    detect_first_existing(
+        list,
+        Ide::Zed,
+        "Zed",
+        &[home.join("AppData/Local/Programs/Zed/Zed.exe")],
+    );
 
     // Fleet: Standard Windows AppData installation path
-    let fleet = home.join("AppData/Local/Programs/Fleet/Fleet.exe");
-    if fleet.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Fleet)) {
-        list.push(InstalledIde::new(Ide::Fleet, "Fleet", fleet));
-    }
+    detect_first_existing(
+        list,
+        Ide::Fleet,
+        "Fleet",
+        &[home.join("AppData/Local/Programs/Fleet/Fleet.exe")],
+    );
 
     // Sublime Text
-    for root in &pf_roots {
-        let st_candidates = [
-            root.join("Sublime Text/sublime_text.exe"),
-            root.join("Sublime Text 3/sublime_text.exe"),
-        ];
-        for candidate in &st_candidates {
-            if candidate.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Sublime)) {
-                list.push(InstalledIde::new(Ide::Sublime, "Sublime Text", candidate.clone()));
-                break;
-            }
-        }
-    }
+    let st_candidates = [
+        pf_roots[0].join("Sublime Text/sublime_text.exe"),
+        pf_roots[0].join("Sublime Text 3/sublime_text.exe"),
+        pf_roots[1].join("Sublime Text/sublime_text.exe"),
+        pf_roots[1].join("Sublime Text 3/sublime_text.exe"),
+    ];
+    detect_first_existing(list, Ide::Sublime, "Sublime Text", &st_candidates);
 
     // Android Studio
-    for root in &pf_roots {
-        let studio = root.join("Android/Android Studio/bin/studio64.exe");
-        if studio.exists() && !list.iter().any(|i| matches!(i.ide, Ide::AndroidStudio)) {
-            list.push(InstalledIde::new(Ide::AndroidStudio, "Android Studio", studio));
-            break;
-        }
-    }
+    let studio_candidates = [
+        pf_roots[0].join("Android/Android Studio/bin/studio64.exe"),
+        pf_roots[1].join("Android/Android Studio/bin/studio64.exe"),
+    ];
+    detect_first_existing(list, Ide::AndroidStudio, "Android Studio", &studio_candidates);
 
     // Neovim
-    for root in &pf_roots {
-        let nvim = root.join("Neovim/bin/nvim.exe");
-        if nvim.exists() && !list.iter().any(|i| matches!(i.ide, Ide::Neovim)) {
-            list.push(InstalledIde::new(Ide::Neovim, "Neovim", nvim));
-            break;
-        }
-    }
+    let nvim_candidates =
+        [pf_roots[0].join("Neovim/bin/nvim.exe"), pf_roots[1].join("Neovim/bin/nvim.exe")];
+    detect_first_existing(list, Ide::Neovim, "Neovim", &nvim_candidates);
 
     // JetBrains IDEs (IntelliJ IDEA, PyCharm, WebStorm, CLion, RustRover, GoLand, Rider)
     let jb_tools = [
@@ -525,14 +470,73 @@ pub fn detect_common_windows_locations_in(list: &mut Vec<InstalledIde>, home: &P
         (Ide::Rider, "Rider", "rider64.exe", &["Rider"][..]),
     ];
 
+    scan_jetbrains_program_files(list, &pf_roots, &jb_tools);
+
     let local_appdata = home.join("AppData/Local");
     let jb_toolbox_apps = local_appdata.join("JetBrains/Toolbox/apps");
+    scan_jetbrains_toolbox(list, &jb_toolbox_apps, &jb_tools);
+}
 
-    for (ide, name, exe_name, tb_names) in &jb_tools {
+fn detect_first_existing(
+    list: &mut Vec<InstalledIde>,
+    ide: Ide,
+    name: &str,
+    candidates: &[PathBuf],
+) {
+    if list.iter().any(|i| i.ide == ide) {
+        return;
+    }
+    for candidate in candidates {
+        if candidate.exists() {
+            list.push(InstalledIde::new(ide, name, candidate.clone()));
+            break;
+        }
+    }
+}
+
+fn scan_jetbrains_toolbox(
+    list: &mut Vec<InstalledIde>,
+    jb_toolbox_apps: &Path,
+    jb_tools: &[(Ide, &str, &str, &[&str])],
+) {
+    if !jb_toolbox_apps.is_dir() {
+        return;
+    }
+    for (ide, name, exe_name, tb_names) in jb_tools {
         if list.iter().any(|i| i.ide == *ide) {
             continue;
         }
-        for root in &pf_roots {
+        for tb_name in *tb_names {
+            let tool_dir = jb_toolbox_apps.join(tb_name);
+            if tool_dir.is_dir()
+                && let Ok(channels) = std::fs::read_dir(&tool_dir)
+            {
+                for channel in channels.flatten() {
+                    if let Ok(builds) = std::fs::read_dir(channel.path()) {
+                        for build in builds.flatten() {
+                            let candidate = build.path().join("bin").join(exe_name);
+                            if candidate.exists() {
+                                list.push(InstalledIde::new(*ide, name, candidate));
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn scan_jetbrains_program_files(
+    list: &mut Vec<InstalledIde>,
+    pf_roots: &[PathBuf],
+    jb_tools: &[(Ide, &str, &str, &[&str])],
+) {
+    for (ide, name, exe_name, _) in jb_tools {
+        if list.iter().any(|i| i.ide == *ide) {
+            continue;
+        }
+        for root in pf_roots {
             let jb_dir = root.join("JetBrains");
             if jb_dir.is_dir()
                 && let Ok(entries) = std::fs::read_dir(&jb_dir)
@@ -542,26 +546,6 @@ pub fn detect_common_windows_locations_in(list: &mut Vec<InstalledIde>, home: &P
                     if candidate.exists() {
                         list.push(InstalledIde::new(*ide, name, candidate));
                         break;
-                    }
-                }
-            }
-        }
-        if !list.iter().any(|i| i.ide == *ide) && jb_toolbox_apps.is_dir() {
-            for tb_name in *tb_names {
-                let tool_dir = jb_toolbox_apps.join(tb_name);
-                if tool_dir.is_dir()
-                    && let Ok(channels) = std::fs::read_dir(&tool_dir)
-                {
-                    for channel in channels.flatten() {
-                        if let Ok(builds) = std::fs::read_dir(channel.path()) {
-                            for build in builds.flatten() {
-                                let candidate = build.path().join("bin").join(exe_name);
-                                if candidate.exists() {
-                                    list.push(InstalledIde::new(*ide, name, candidate));
-                                    break;
-                                }
-                            }
-                        }
                     }
                 }
             }
