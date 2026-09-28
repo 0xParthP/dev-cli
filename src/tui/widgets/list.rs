@@ -82,6 +82,7 @@ pub fn render_centered_notice(frame: &mut Frame, area: Rect, notice: Notice<'_>,
 
     frame.render_widget(widget, area);
 }
+
 /// Helper to split a string at a character cursor offset into:
 /// `(before_str, cursor_char, after_str)`
 pub fn split_at_cursor(s: &str, cursor: usize) -> (&str, &str, &str) {
@@ -96,5 +97,31 @@ pub fn split_at_cursor(s: &str, cursor: usize) -> (&str, &str, &str) {
         (before, cursor_char, after)
     } else {
         (before, " ", "")
+    }
+}
+
+/// Helper to append common Submit/Cancel action buttons and optional status error line to form lines.
+pub fn append_form_footer<'a>(
+    lines: &mut Vec<Line<'a>>,
+    status_message: Option<&str>,
+    palette: Palette,
+) {
+    lines.push(Line::from(""));
+    lines.push(Line::from(vec![
+        Span::raw("          "),
+        Span::styled("Enter", Style::default().fg(palette.success)),
+        Span::raw(" Submit    "),
+        Span::styled("Esc", Style::default().fg(palette.danger)),
+        Span::raw(" Cancel"),
+    ]));
+
+    if let Some(msg) = status_message
+        && msg.starts_with('✗')
+    {
+        lines.push(Line::from(""));
+        lines.push(Line::from(Span::styled(
+            format!("   {msg}"),
+            Style::default().fg(palette.danger),
+        )));
     }
 }

@@ -210,26 +210,25 @@ fn build_custom_ide_items(
     }
 }
 
-/// Render a built-in IDE entry.
-fn render_installed_entry(
-    ide: crate::models::ide::Ide,
+/// Helper to render common entry row spans for IDE list items.
+#[allow(clippy::too_many_arguments)]
+fn render_entry_row(
+    left_name: &str,
+    status_text: &str,
+    status_color: ratatui::style::Color,
+    extra_tag: Option<&str>,
     is_default: bool,
     is_selected: bool,
     available_width: usize,
     palette: Palette,
-) -> ListItem<'static> {
+) -> Vec<Span<'static>> {
     let prefix = if is_selected { "❯ " } else { "  " };
-    let left = ide.display_name().to_string();
-    let status = "✓ Detected";
-
-    let prefix_len = 2;
-    let left_len = unicode_width::UnicodeWidthStr::width(left.as_str());
-    let right_len = if is_default {
-        unicode_width::UnicodeWidthStr::width(status) + 11
-    } else {
-        unicode_width::UnicodeWidthStr::width(status)
-    };
-    let spacing = available_width.saturating_sub(prefix_len + left_len + right_len);
+    let tag_len = extra_tag.map_or(0, |t| unicode_width::UnicodeWidthStr::width(t) + 2);
+    let right_len = unicode_width::UnicodeWidthStr::width(status_text)
+        + tag_len
+        + if is_default { 11 } else { 0 };
+    let left_len = unicode_width::UnicodeWidthStr::width(left_name);
+    let spacing = available_width.saturating_sub(2 + left_len + right_len);
 
     let mut spans = vec![
         Span::styled(
@@ -240,7 +239,10 @@ fn render_installed_entry(
                 Style::default().fg(palette.muted)
             },
         ),
-        Span::styled(left, Style::default().fg(palette.text).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            left_name.to_string(),
+            Style::default().fg(palette.text).add_modifier(Modifier::BOLD),
+        ),
         Span::raw(" ".repeat(spacing)),
     ];
 
@@ -251,7 +253,31 @@ fn render_installed_entry(
         ));
     }
 
-    spans.push(Span::styled(status.to_string(), Style::default().fg(palette.success)));
+    spans.push(Span::styled(status_text.to_string(), Style::default().fg(status_color)));
+    if let Some(tag) = extra_tag {
+        spans.push(Span::styled(format!("  {}", tag), Style::default().fg(palette.muted)));
+    }
+    spans
+}
+
+/// Render a built-in IDE entry.
+fn render_installed_entry(
+    ide: crate::models::ide::Ide,
+    is_default: bool,
+    is_selected: bool,
+    available_width: usize,
+    palette: Palette,
+) -> ListItem<'static> {
+    let spans = render_entry_row(
+        ide.display_name(),
+        "✓ Detected",
+        palette.success,
+        None,
+        is_default,
+        is_selected,
+        available_width,
+        palette,
+    );
 
     ListItem::new(vec![Line::from(spans), Line::default()])
 }
@@ -264,51 +290,21 @@ fn render_custom_entry(
     available_width: usize,
     palette: Palette,
 ) -> ListItem<'static> {
-    let prefix = if is_selected { "❯ " } else { "  " };
-    let left = custom.display_name.to_string();
-    let tag = "(custom)";
-    let status = if custom.verified {
+    let (status_text, status_color) = if custom.verified {
         ("✓ Verified", palette.success)
     } else {
         ("✗ Unverified", palette.warning)
     };
-
-    let prefix_len = 2;
-    let left_len = unicode_width::UnicodeWidthStr::width(left.as_str());
-    let right_len = if is_default {
-        unicode_width::UnicodeWidthStr::width(status.0)
-            + 2
-            + unicode_width::UnicodeWidthStr::width(tag)
-            + 11
-    } else {
-        unicode_width::UnicodeWidthStr::width(status.0)
-            + 2
-            + unicode_width::UnicodeWidthStr::width(tag)
-    };
-    let spacing = available_width.saturating_sub(prefix_len + left_len + right_len);
-
-    let mut spans = vec![
-        Span::styled(
-            prefix.to_string(),
-            if is_selected {
-                Style::default().fg(palette.primary).add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(palette.muted)
-            },
-        ),
-        Span::styled(left, Style::default().fg(palette.text).add_modifier(Modifier::BOLD)),
-        Span::raw(" ".repeat(spacing)),
-    ];
-
-    if is_default {
-        spans.push(Span::styled(
-            "★ DEFAULT  ".to_string(),
-            Style::default().fg(palette.primary).add_modifier(Modifier::BOLD),
-        ));
-    }
-
-    spans.push(Span::styled(status.0.to_string(), Style::default().fg(status.1)));
-    spans.push(Span::styled(format!("  {}", tag), Style::default().fg(palette.muted)));
+    let spans = render_entry_row(
+        &custom.display_name,
+        status_text,
+        status_color,
+        Some("(custom)"),
+        is_default,
+        is_selected,
+        available_width,
+        palette,
+    );
 
     ListItem::new(vec![
         Line::from(spans),
@@ -369,31 +365,13 @@ fn render_add_form(frame: &mut Frame, area: Rect, state: &AppState, palette: Pal
         args_active,
     ));
 
-    let mut lines = vec![
-        Line::from(""),
-        Line::from(line_name),
-        Line::from(line_path),
-        Line::from(line_args),
-        Line::from(""),
-        Line::from(vec![
-            Span::raw("          "),
-            Span::styled("Enter", Style::default().fg(palette.success)),
-            Span::raw(" Submit    "),
-            Span::styled("Esc", Style::default().fg(palette.danger)),
-            Span::raw(" Cancel"),
-        ]),
-    ];
-
-    // Show error message if present
-    if let Some(ref msg) = state.ide_status_message
-        && msg.starts_with('✗')
-    {
-        lines.push(Line::from(""));
-        lines.push(Line::from(Span::styled(
-            format!("   {msg}"),
-            Style::default().fg(palette.danger),
-        )));
-    }
+    let mut lines =
+        vec![Line::from(""), Line::from(line_name), Line::from(line_path), Line::from(line_args)];
+    crate::tui::widgets::list::append_form_footer(
+        &mut lines,
+        state.ide_status_message.as_deref(),
+        palette,
+    );
 
     let form = Paragraph::new(lines).block(
         Block::default().title(" Add Custom IDE ").borders(Borders::ALL).border_style(

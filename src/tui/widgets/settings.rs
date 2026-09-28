@@ -221,29 +221,12 @@ fn render_add_root_form(frame: &mut Frame, area: Rect, state: &AppState, palette
         ));
     }
 
-    let mut lines = vec![
-        Line::from(""),
-        Line::from(line_path_spans),
-        Line::from(""),
-        Line::from(vec![
-            Span::raw("          "),
-            Span::styled("Enter", Style::default().fg(palette.success)),
-            Span::raw(" Submit    "),
-            Span::styled("Esc", Style::default().fg(palette.danger)),
-            Span::raw(" Cancel"),
-        ]),
-    ];
-
-    // Show error message if present
-    if let Some(ref msg) = state.settings_status_message
-        && msg.starts_with('✗')
-    {
-        lines.push(Line::from(""));
-        lines.push(Line::from(Span::styled(
-            format!("   {msg}"),
-            Style::default().fg(palette.danger),
-        )));
-    }
+    let mut lines = vec![Line::from(""), Line::from(line_path_spans)];
+    crate::tui::widgets::list::append_form_footer(
+        &mut lines,
+        state.settings_status_message.as_deref(),
+        palette,
+    );
 
     let form = Paragraph::new(lines).block(
         Block::default().title(" Add Project Root ").borders(Borders::ALL).border_style(
