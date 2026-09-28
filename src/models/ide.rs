@@ -70,85 +70,46 @@ pub enum Ide {
 }
 
 impl Ide {
+    fn info(&self) -> (&'static str, &'static str, ratatui::style::Color) {
+        use ratatui::style::Color::*;
+        match self {
+            Ide::Antigravity => ("Antigravity", "🌌", Rgb(140, 90, 255)),
+            Ide::AntigravityCli => ("Antigravity CLI", "⚡", Rgb(175, 120, 255)),
+            Ide::Cursor => ("Cursor", "🎯", Rgb(0, 220, 200)),
+            Ide::Vscode => ("VS Code", "🟦", Rgb(35, 145, 255)),
+            Ide::Windsurf => ("Windsurf", "🏄", Rgb(0, 210, 180)),
+            Ide::Claude => ("Claude Code", "🤖", Rgb(220, 130, 70)),
+            Ide::Sublime => ("Sublime Text", "🧡", Rgb(255, 150, 40)),
+            Ide::Neovim => ("Neovim", "🟩", Rgb(87, 175, 77)),
+            Ide::Zed => ("Zed", "⚡", Rgb(255, 195, 45)),
+            Ide::Idea => ("IntelliJ IDEA", "💡", Rgb(255, 80, 140)),
+            Ide::PyCharm => ("PyCharm", "🐍", Rgb(70, 210, 120)),
+            Ide::WebStorm => ("WebStorm", "🌐", Rgb(0, 200, 240)),
+            Ide::CLion => ("CLion", "⚙️", Rgb(50, 170, 220)),
+            Ide::RustRover => ("RustRover", "🦀", Rgb(240, 100, 50)),
+            Ide::GoLand => ("GoLand", "🦫", Rgb(60, 200, 210)),
+            Ide::Fleet => ("Fleet", "⚡", Rgb(160, 110, 255)),
+            Ide::Rider => ("Rider", "🚀", Rgb(180, 80, 240)),
+            Ide::AndroidStudio => ("Android Studio", "📱", Rgb(100, 195, 115)),
+            Ide::VisualStudio => ("Visual Studio", "💜", Rgb(130, 85, 225)),
+            Ide::Helix => ("Helix", "🧬", Rgb(170, 100, 240)),
+            Ide::Terminal => ("Terminal", "💻", Rgb(140, 210, 90)),
+        }
+    }
+
     /// Human-readable display label for TUI badges.
     pub fn display_name(&self) -> &'static str {
-        match self {
-            Ide::Antigravity => "Antigravity",
-            Ide::AntigravityCli => "Antigravity CLI",
-            Ide::Cursor => "Cursor",
-            Ide::Vscode => "VS Code",
-            Ide::Windsurf => "Windsurf",
-            Ide::Claude => "Claude Code",
-            Ide::Sublime => "Sublime Text",
-            Ide::Neovim => "Neovim",
-            Ide::Zed => "Zed",
-            Ide::Idea => "IntelliJ IDEA",
-            Ide::PyCharm => "PyCharm",
-            Ide::WebStorm => "WebStorm",
-            Ide::CLion => "CLion",
-            Ide::RustRover => "RustRover",
-            Ide::GoLand => "GoLand",
-            Ide::Fleet => "Fleet",
-            Ide::Rider => "Rider",
-            Ide::AndroidStudio => "Android Studio",
-            Ide::VisualStudio => "Visual Studio",
-            Ide::Helix => "Helix",
-            Ide::Terminal => "Terminal",
-        }
+        self.info().0
     }
 
     /// Icon logo representing the IDE.
     pub fn icon(&self) -> &'static str {
-        match self {
-            Ide::Antigravity => "🌌",
-            Ide::AntigravityCli => "⚡",
-            Ide::Cursor => "🎯",
-            Ide::Vscode => "🟦",
-            Ide::Windsurf => "🏄",
-            Ide::Claude => "🤖",
-            Ide::Sublime => "🧡",
-            Ide::Neovim => "🟩",
-            Ide::Zed => "⚡",
-            Ide::Idea => "💡",
-            Ide::PyCharm => "🐍",
-            Ide::WebStorm => "🌐",
-            Ide::CLion => "⚙️",
-            Ide::RustRover => "🦀",
-            Ide::GoLand => "🦫",
-            Ide::Fleet => "⚡",
-            Ide::Rider => "🚀",
-            Ide::AndroidStudio => "📱",
-            Ide::VisualStudio => "💜",
-            Ide::Helix => "🧬",
-            Ide::Terminal => "💻",
-        }
+        self.info().1
     }
 
     /// Distinct theme color for each IDE badge.
     pub fn color(&self) -> ratatui::style::Color {
-        match self {
-            Ide::Antigravity => ratatui::style::Color::Rgb(140, 90, 255),
-            Ide::AntigravityCli => ratatui::style::Color::Rgb(175, 120, 255),
-            Ide::Cursor => ratatui::style::Color::Rgb(0, 220, 200),
-            Ide::Vscode => ratatui::style::Color::Rgb(35, 145, 255),
-            Ide::Windsurf => ratatui::style::Color::Rgb(0, 210, 180),
-            Ide::Claude => ratatui::style::Color::Rgb(220, 130, 70),
-            Ide::Sublime => ratatui::style::Color::Rgb(255, 150, 40),
-            Ide::Neovim => ratatui::style::Color::Rgb(87, 175, 77),
-            Ide::Zed => ratatui::style::Color::Rgb(255, 195, 45),
-            Ide::Idea => ratatui::style::Color::Rgb(255, 80, 140),
-            Ide::PyCharm => ratatui::style::Color::Rgb(70, 210, 120),
-            Ide::WebStorm => ratatui::style::Color::Rgb(0, 200, 240),
-            Ide::CLion => ratatui::style::Color::Rgb(50, 170, 220),
-            Ide::RustRover => ratatui::style::Color::Rgb(240, 100, 50),
-            Ide::GoLand => ratatui::style::Color::Rgb(60, 200, 210),
-            Ide::Fleet => ratatui::style::Color::Rgb(160, 110, 255),
-            Ide::Rider => ratatui::style::Color::Rgb(180, 80, 240),
-            Ide::AndroidStudio => ratatui::style::Color::Rgb(100, 195, 115),
-            Ide::VisualStudio => ratatui::style::Color::Rgb(130, 85, 225),
-            Ide::Helix => ratatui::style::Color::Rgb(170, 100, 240),
-            Ide::Terminal => ratatui::style::Color::Rgb(140, 210, 90),
-        }
+        self.info().2
     }
 
     /// Return the next IDE variant in cycling sequence.

@@ -87,33 +87,13 @@ fn render_ide_list(frame: &mut Frame, area: Rect, state: &AppState, palette: Pal
         palette,
     );
 
-    let custom_items: Vec<ListItem> = if state.custom_ides.is_empty() {
-        vec![ListItem::new(vec![
-            Line::from(Span::styled(
-                "  No custom IDEs configured. Press 'a' to add.",
-                Style::default().fg(palette.muted),
-            )),
-            Line::default(),
-        ])]
-    } else {
-        state
-            .custom_ides
-            .iter()
-            .enumerate()
-            .map(|(idx, custom)| {
-                let is_default = state.default_ide
-                    == crate::models::ide::IdeSelection::Custom(custom.id.clone());
-                let is_selected = state.selected_index == installed_count + idx;
-                render_custom_entry(
-                    custom,
-                    is_default,
-                    is_selected,
-                    split_chunks[1].width.saturating_sub(4) as usize,
-                    palette,
-                )
-            })
-            .collect()
-    };
+    let custom_items = build_custom_ide_items(
+        state,
+        installed_count,
+        split_chunks[1].width.saturating_sub(4) as usize,
+        true,
+        palette,
+    );
 
     let selected_bottom = if state.selected_index >= installed_count && custom_count > 0 {
         Some(state.selected_index - installed_count)
@@ -178,31 +158,13 @@ fn render_split_view(frame: &mut Frame, area: Rect, state: &AppState, palette: P
         palette,
     );
 
-    let custom_items: Vec<ListItem> = if state.custom_ides.is_empty() {
-        vec![ListItem::new(vec![
-            Line::from(Span::styled(
-                "  No custom IDEs configured. Press 'a' to add.",
-                Style::default().fg(palette.muted),
-            )),
-            Line::default(),
-        ])]
-    } else {
-        state
-            .custom_ides
-            .iter()
-            .map(|custom| {
-                let is_default = state.default_ide
-                    == crate::models::ide::IdeSelection::Custom(custom.id.clone());
-                render_custom_entry(
-                    custom,
-                    is_default,
-                    false,
-                    top_chunks[1].width.saturating_sub(4) as usize,
-                    palette,
-                )
-            })
-            .collect()
-    };
+    let custom_items = build_custom_ide_items(
+        state,
+        0,
+        top_chunks[1].width.saturating_sub(4) as usize,
+        false,
+        palette,
+    );
     render_list_with_symbol(
         frame,
         top_chunks[1],
@@ -215,6 +177,37 @@ fn render_split_view(frame: &mut Frame, area: Rect, state: &AppState, palette: P
 
     // Bottom half: Add form
     render_add_form(frame, chunks[1], state, palette);
+}
+
+/// Helper to build list items for custom IDEs.
+fn build_custom_ide_items(
+    state: &AppState,
+    installed_offset: usize,
+    width: usize,
+    interactive: bool,
+    palette: Palette,
+) -> Vec<ListItem<'static>> {
+    if state.custom_ides.is_empty() {
+        vec![ListItem::new(vec![
+            Line::from(Span::styled(
+                "  No custom IDEs configured. Press 'a' to add.",
+                Style::default().fg(palette.muted),
+            )),
+            Line::default(),
+        ])]
+    } else {
+        state
+            .custom_ides
+            .iter()
+            .enumerate()
+            .map(|(idx, custom)| {
+                let is_default = state.default_ide
+                    == crate::models::ide::IdeSelection::Custom(custom.id.clone());
+                let is_selected = interactive && (state.selected_index == installed_offset + idx);
+                render_custom_entry(custom, is_default, is_selected, width, palette)
+            })
+            .collect()
+    }
 }
 
 /// Render a built-in IDE entry.

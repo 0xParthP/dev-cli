@@ -26,21 +26,9 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
     }
 }
 
-/// Render the settings list with preferences cards.
-fn render_settings_list(frame: &mut Frame, area: Rect, state: &AppState, palette: Palette) {
-    let (main_area, status_area) = if let Some(ref msg) = state.settings_status_message {
-        let chunks = Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).split(area);
-        (chunks[0], Some((chunks[1], msg)))
-    } else {
-        (area, None)
-    };
-
-    let vertical_chunks =
-        Layout::vertical([Constraint::Percentage(45), Constraint::Percentage(55)]).split(main_area);
-
-    // Top: Project Roots list
-    let title = format!(" Project Roots ({}) ", state.project_roots.len());
-    let list_items: Vec<ListItem> = state
+/// Helper to build list items for project roots.
+fn build_root_list_items(state: &AppState, palette: Palette) -> Vec<ListItem<'static>> {
+    state
         .project_roots
         .iter()
         .map(|root| {
@@ -56,7 +44,24 @@ fn render_settings_list(frame: &mut Frame, area: Rect, state: &AppState, palette
                 Line::default(),
             ])
         })
-        .collect();
+        .collect()
+}
+
+/// Render the settings list with preferences cards.
+fn render_settings_list(frame: &mut Frame, area: Rect, state: &AppState, palette: Palette) {
+    let (main_area, status_area) = if let Some(ref msg) = state.settings_status_message {
+        let chunks = Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).split(area);
+        (chunks[0], Some((chunks[1], msg)))
+    } else {
+        (area, None)
+    };
+
+    let vertical_chunks =
+        Layout::vertical([Constraint::Percentage(45), Constraint::Percentage(55)]).split(main_area);
+
+    // Top: Project Roots list
+    let title = format!(" Project Roots ({}) ", state.project_roots.len());
+    let list_items = build_root_list_items(state, palette);
 
     let selected = if state.project_roots.is_empty() {
         None
@@ -185,23 +190,7 @@ fn render_split_view(frame: &mut Frame, area: Rect, state: &AppState, palette: P
 
     // Top: project roots list (non-interactive)
     let title = format!(" Project Roots ({}) ", state.project_roots.len());
-    let list_items: Vec<ListItem> = state
-        .project_roots
-        .iter()
-        .map(|root| {
-            let path_str = display_path(root);
-            ListItem::new(vec![
-                Line::from(vec![
-                    Span::styled("📁  ", Style::default().fg(palette.warning)),
-                    Span::styled(
-                        path_str,
-                        Style::default().fg(palette.text).add_modifier(Modifier::BOLD),
-                    ),
-                ]),
-                Line::default(),
-            ])
-        })
-        .collect();
+    let list_items = build_root_list_items(state, palette);
     render_list(frame, chunks[0], title, list_items, None, palette);
 
     // Bottom: add form
