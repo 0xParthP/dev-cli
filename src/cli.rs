@@ -25,6 +25,9 @@ pub enum Commands {
     /// IDE Management
     Ide(IdeCommand),
 
+    /// Clone a Git repository.
+    Clone(CloneArgs),
+
     /// Open a project (equivalent to `project open`).
     Open(OpenArgs),
 }
@@ -38,6 +41,21 @@ pub struct OpenArgs {
     /// IDE to use for opening (overrides config default).
     #[arg(short, long)]
     pub ide: Option<IdeSelection>,
+}
+
+/// Arguments for cloning a Git repository.
+#[derive(Args)]
+pub struct CloneArgs {
+    /// The Git repository URL to clone.
+    pub url: String,
+
+    /// Specify which project root to use by index or exact path (defaults to the first root).
+    #[arg(short, long)]
+    pub root: Option<String>,
+
+    /// Clone into a specific directory name instead of inferring from the URL.
+    #[arg(short, long)]
+    pub name: Option<String>,
 }
 
 /// Subcommands for `dev project`.

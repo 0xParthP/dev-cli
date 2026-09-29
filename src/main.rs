@@ -19,6 +19,7 @@ fn main() -> Result<()> {
         Some(Commands::Project(cmd)) => commands::project::execute(cmd)?,
         Some(Commands::Config(cmd)) => commands::config::execute(cmd)?,
         Some(Commands::Ide(cmd)) => commands::ide::execute(cmd)?,
+        Some(Commands::Clone(args)) => commands::clone::execute(args)?,
         Some(Commands::Open(args)) => commands::project::open_shortcut(args)?,
 
         None => tui::run()?,

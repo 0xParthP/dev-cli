@@ -6,6 +6,7 @@ use serial_test::serial;
 mod common;
 
 #[test]
+#[serial]
 fn app_state_starts_empty() {
     let state = AppState::new();
 
@@ -16,6 +17,7 @@ fn app_state_starts_empty() {
 }
 
 #[test]
+#[serial]
 fn quit_sets_should_quit() {
     let mut state = AppState::new();
 
@@ -25,6 +27,7 @@ fn quit_sets_should_quit() {
 }
 
 #[test]
+#[serial]
 fn visible_items_returns_all_when_query_empty() {
     let mut state = AppState::new();
 
@@ -36,6 +39,7 @@ fn visible_items_returns_all_when_query_empty() {
 }
 
 #[test]
+#[serial]
 fn visible_items_filters_case_insensitively() {
     let mut state = AppState::new();
 
@@ -51,6 +55,7 @@ fn visible_items_filters_case_insensitively() {
 }
 
 #[test]
+#[serial]
 fn move_down_stops_at_last_project() {
     let mut state = AppState::new();
 
@@ -64,6 +69,7 @@ fn move_down_stops_at_last_project() {
 }
 
 #[test]
+#[serial]
 fn move_up_stops_at_zero() {
     let mut state = AppState::new();
 
@@ -77,6 +83,7 @@ fn move_up_stops_at_zero() {
 }
 
 #[test]
+#[serial]
 fn push_char_appends_to_search_and_resets_selection() {
     let mut state = AppState::new();
 
@@ -90,6 +97,7 @@ fn push_char_appends_to_search_and_resets_selection() {
 }
 
 #[test]
+#[serial]
 fn pop_char_removes_last_character() {
     let mut state = AppState::new();
 
@@ -103,6 +111,7 @@ fn pop_char_removes_last_character() {
 }
 
 #[test]
+#[serial]
 fn clamp_selection_resets_when_filtered_list_is_empty() {
     let mut state = AppState::new();
 
@@ -116,6 +125,7 @@ fn clamp_selection_resets_when_filtered_list_is_empty() {
 }
 
 #[test]
+#[serial]
 fn clamp_selection_moves_selection_to_last_item() {
     let mut state = AppState::new();
 
@@ -129,6 +139,7 @@ fn clamp_selection_moves_selection_to_last_item() {
 }
 
 #[test]
+#[serial]
 fn search_filters_projects() {
     let mut state = AppState::new();
 
@@ -142,6 +153,7 @@ fn search_filters_projects() {
 }
 
 #[test]
+#[serial]
 fn move_down_on_recent_tab_stops_at_end() {
     use dev_cli::models::recent_project::RecentProject;
     use dev_cli::tui::state::Tab;
@@ -163,6 +175,7 @@ fn move_down_on_recent_tab_stops_at_end() {
 }
 
 #[test]
+#[serial]
 fn typing_resets_selection() {
     let mut state = AppState::new();
 
@@ -175,6 +188,7 @@ fn typing_resets_selection() {
 }
 
 #[test]
+#[serial]
 fn refresh_reloads_projects_and_recents() {
     let mut state = AppState::new();
     state.selected_index = 100;
@@ -183,6 +197,7 @@ fn refresh_reloads_projects_and_recents() {
 }
 
 #[test]
+#[serial]
 fn cycle_selected_ide_updates_override() {
     use dev_cli::models::ide::IdeSelection;
     let mut state = AppState::new();
@@ -203,6 +218,7 @@ fn cycle_selected_ide_updates_override() {
 }
 
 #[test]
+#[serial]
 fn cycle_selected_ide_skips_uninstalled_ides() {
     use dev_cli::models::ide::IdeSelection;
     let mut state = AppState::new();
@@ -223,6 +239,7 @@ fn cycle_selected_ide_skips_uninstalled_ides() {
 }
 
 #[test]
+#[serial]
 fn get_project_ide_falls_back_to_first_installed_if_default_uninstalled() {
     use dev_cli::models::ide::IdeSelection;
     let mut state = AppState::new();
@@ -235,6 +252,7 @@ fn get_project_ide_falls_back_to_first_installed_if_default_uninstalled() {
 }
 
 #[test]
+#[serial]
 fn cycle_selected_ide_on_recent_tab() {
     use dev_cli::models::ide::IdeSelection;
     use dev_cli::models::recent_project::RecentProject;
@@ -272,6 +290,7 @@ fn cycle_selected_ide_on_recent_tab() {
 }
 
 #[test]
+#[serial]
 fn projects_tab_uses_default_ide_not_recent_ide() {
     use dev_cli::models::ide::IdeSelection;
     use dev_cli::models::recent_project::RecentProject;
@@ -331,6 +350,7 @@ fn test_app_state_cycling_and_toggles() {
 }
 
 #[test]
+#[serial]
 fn test_search_cursor_and_character_edits() {
     let mut state = AppState::new();
 
@@ -361,6 +381,7 @@ fn test_search_cursor_and_character_edits() {
 }
 
 #[test]
+#[serial]
 fn test_editing_mode_field_manipulation() {
     use dev_cli::tui::state::{IdeTabFocus, InputMode, Tab};
 
@@ -491,6 +512,7 @@ fn test_settings_tab_root_management() {
 }
 
 #[test]
+#[serial]
 fn test_tree_toggle_and_scroll_offset() {
     use dev_cli::tui::state::Tab;
     use dev_cli::tui::tree::TreeNode;
