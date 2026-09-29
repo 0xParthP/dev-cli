@@ -1,6 +1,9 @@
 //! Application state for the dashboard.
 
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::{HashMap, VecDeque},
+    path::PathBuf,
+};
 
 use crate::{
     config::Config,
@@ -45,6 +48,15 @@ pub enum SettingsTabFocus {
     List,
     /// Adding a new project root.
     AddRoot,
+}
+
+/// Which element has focus on the Projects tab.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectsTabFocus {
+    /// Browsing the project list.
+    List,
+    /// Filling in the Clone form.
+    CloneForm,
 }
 
 /// An entry in the IDE tab list — either a built-in detected IDE or a custom one.
@@ -136,6 +148,20 @@ pub struct AppState {
     /// Settings tab status message.
     pub settings_status_message: Option<String>,
 
+    // --- Clone form state (Projects tab) ---
+    pub projects_tab_focus: ProjectsTabFocus,
+    pub clone_url: String,
+    pub clone_url_cursor: usize,
+    pub clone_root_index: usize,
+    pub clone_name: String,
+    pub clone_name_cursor: usize,
+    pub clone_field: usize,
+    pub clone_status_message: Option<String>,
+    /// Streaming log lines received from the background git process.
+    pub clone_log_lines: VecDeque<String>,
+    /// Background clone task channels (None when idle).
+    pub clone_task: Option<crate::commands::clone::CloneChannels>,
+
     /// Maximum search depth for repository scanner.
     pub max_depth: usize,
 
@@ -210,6 +236,17 @@ impl Default for AppState {
             settings_add_root_cursor: 0,
             project_roots,
             settings_status_message: None,
+
+            projects_tab_focus: ProjectsTabFocus::List,
+            clone_url: String::new(),
+            clone_url_cursor: 0,
+            clone_root_index: 0,
+            clone_name: String::new(),
+            clone_name_cursor: 0,
+            clone_field: 0,
+            clone_status_message: None,
+            clone_log_lines: VecDeque::new(),
+            clone_task: None,
 
             max_depth: config.max_depth,
             ignore_patterns: config.ignore_patterns,
@@ -877,6 +914,197 @@ impl AppState {
 
             // Refresh projects after removing a root.
             let _ = self.refresh();
+        }
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Clone Form Methods (Projects tab)
+    // ──────────────────────────────────────────────────────
+
+    /// Opens the clone form on the Projects tab.
+    pub fn open_clone_modal(&mut self) {
+        self.projects_tab_focus = ProjectsTabFocus::CloneForm;
+        self.clone_url.clear();
+        self.clone_url_cursor = 0;
+        self.clone_root_index = 0;
+        self.clone_name.clear();
+        self.clone_name_cursor = 0;
+        self.clone_field = 0;
+        self.clone_status_message = None;
+        self.clone_log_lines.clear();
+        self.clone_task = None;
+        self.input_mode = InputMode::Editing;
+    }
+
+    /// Closes the clone form and restores normal input mode.
+    pub fn close_clone_modal(&mut self) {
+        self.projects_tab_focus = ProjectsTabFocus::List;
+        self.input_mode = InputMode::Normal;
+    }
+
+    /// Returns true if the clone form is active.
+    pub fn is_clone_form_active(&self) -> bool {
+        self.projects_tab_focus == ProjectsTabFocus::CloneForm
+    }
+
+    /// Cycle active field in clone modal (0 = URL, 1 = Root Selector, 2 = Custom Name).
+    pub fn cycle_clone_field(&mut self) {
+        self.clone_field = (self.clone_field + 1) % 3;
+    }
+
+    /// Cycle active field backwards in clone modal.
+    pub fn cycle_clone_field_backwards(&mut self) {
+        self.clone_field = if self.clone_field == 0 { 2 } else { self.clone_field - 1 };
+    }
+
+    /// Push character into active clone input field.
+    pub fn clone_push_char(&mut self, c: char) {
+        match self.clone_field {
+            0 => {
+                self.clone_url.insert(self.clone_url_cursor, c);
+                self.clone_url_cursor += 1;
+            }
+            2 => {
+                self.clone_name.insert(self.clone_name_cursor, c);
+                self.clone_name_cursor += 1;
+            }
+            _ => {}
+        }
+    }
+
+    /// Backspace character from active clone input field.
+    pub fn clone_pop_char(&mut self) {
+        match self.clone_field {
+            0 if self.clone_url_cursor > 0 => {
+                self.clone_url_cursor -= 1;
+                self.clone_url.remove(self.clone_url_cursor);
+            }
+            2 if self.clone_name_cursor > 0 => {
+                self.clone_name_cursor -= 1;
+                self.clone_name.remove(self.clone_name_cursor);
+            }
+            _ => {}
+        }
+    }
+
+    /// Delete character at cursor from active clone input field.
+    pub fn clone_delete_char(&mut self) {
+        match self.clone_field {
+            0 if self.clone_url_cursor < self.clone_url.len() => {
+                self.clone_url.remove(self.clone_url_cursor);
+            }
+            2 if self.clone_name_cursor < self.clone_name.len() => {
+                self.clone_name.remove(self.clone_name_cursor);
+            }
+            _ => {}
+        }
+    }
+
+    /// Move cursor left in active clone input field / select previous root.
+    pub fn clone_move_left(&mut self) {
+        match self.clone_field {
+            0 if self.clone_url_cursor > 0 => {
+                self.clone_url_cursor -= 1;
+            }
+            1 if self.clone_root_index > 0 => {
+                self.clone_root_index -= 1;
+            }
+            2 if self.clone_name_cursor > 0 => {
+                self.clone_name_cursor -= 1;
+            }
+            _ => {}
+        }
+    }
+
+    /// Move cursor right in active clone input field / select next root.
+    pub fn clone_move_right(&mut self) {
+        match self.clone_field {
+            0 if self.clone_url_cursor < self.clone_url.len() => {
+                self.clone_url_cursor += 1;
+            }
+            1 if !self.project_roots.is_empty()
+                && self.clone_root_index + 1 < self.project_roots.len() =>
+            {
+                self.clone_root_index += 1;
+            }
+            2 if self.clone_name_cursor < self.clone_name.len() => {
+                self.clone_name_cursor += 1;
+            }
+            _ => {}
+        }
+    }
+
+    /// Submit the clone form — validates inputs and spawns a background git thread.
+    pub fn submit_clone(&mut self) -> Result<(), String> {
+        let url = self.clone_url.trim().to_string();
+        if url.is_empty() {
+            return Err("URL cannot be empty".to_string());
+        }
+
+        if self.project_roots.is_empty() {
+            return Err("No project roots configured".to_string());
+        }
+
+        // Already cloning — ignore duplicate submits.
+        if self.clone_task.is_some() {
+            return Ok(());
+        }
+
+        let root_index = self.clone_root_index.min(self.project_roots.len() - 1);
+        let target_root = self.project_roots[root_index].clone();
+
+        let custom_name = if self.clone_name.trim().is_empty() {
+            None
+        } else {
+            Some(self.clone_name.trim().to_string())
+        };
+
+        self.clone_log_lines.clear();
+        self.clone_status_message = Some("⏳ Cloning...".to_string());
+        // Switch to Normal mode so the user can navigate away but keep form open.
+        self.input_mode = InputMode::Normal;
+
+        let channels =
+            crate::commands::clone::clone_repository_streamed(url, target_root, custom_name);
+        self.clone_task = Some(channels);
+        Ok(())
+    }
+
+    /// Poll the background clone task channels and update state.
+    /// Call this every tick from the event loop.
+    pub fn tick_clone_task(&mut self) {
+        // Keep at most 200 log lines.
+        const MAX_LINES: usize = 200;
+
+        if let Some(ref task) = self.clone_task {
+            // Drain all pending log lines (non-blocking).
+            while let Ok(line) = task.log_rx.try_recv() {
+                if self.clone_log_lines.len() >= MAX_LINES {
+                    self.clone_log_lines.pop_front();
+                }
+                self.clone_log_lines.push_back(line);
+            }
+
+            // Check for completion.
+            match task.done_rx.try_recv() {
+                Ok(Ok(cloned_path)) => {
+                    let msg = format!("✓ Cloned into {}", cloned_path.display());
+                    self.clone_status_message = Some(msg.clone());
+                    self.clone_log_lines.push_back(format!("✓ Done → {}", cloned_path.display()));
+                    self.clone_task = None;
+                    // Immediately refresh the project tree.
+                    let _ = self.refresh();
+                    // Automatically close the clone split window.
+                    self.close_clone_modal();
+                }
+                Ok(Err(err)) => {
+                    self.clone_status_message = Some(format!("✗ {err}"));
+                    self.clone_log_lines.push_back(format!("✗ Error: {err}"));
+                    self.clone_task = None;
+                    self.input_mode = InputMode::Editing;
+                }
+                Err(_) => {} // Still running.
+            }
         }
     }
 }

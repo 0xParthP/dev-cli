@@ -30,7 +30,12 @@ pub fn render(frame: &mut Frame, state: &AppState) {
 
     match state.active_tab {
         Tab::Projects => {
-            search::render(frame, chunks[2], state, palette);
+            // Hide search bar when clone form is open (it occupies the content area)
+            if state.is_clone_form_active() {
+                frame.render_widget(Block::default(), chunks[2]);
+            } else {
+                search::render(frame, chunks[2], state, palette);
+            }
             project_list::render(frame, chunks[3], state, palette);
         }
         Tab::Recent => {
