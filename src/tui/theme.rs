@@ -79,7 +79,7 @@ pub fn get_palette(theme_name: &str) -> Palette {
         "monokai" => from_rgb_list("Monokai", &[(166, 226, 46), (39, 40, 34), (248, 248, 242), (117, 113, 94), (73, 72, 62), (166, 226, 46), (230, 219, 116), (249, 38, 114), (102, 217, 239), (174, 129, 255), (73, 72, 62)]),
         "high-contrast" => from_rgb_list("High Contrast", &[(255, 255, 0), (0, 0, 0), (255, 255, 255), (180, 180, 180), (255, 255, 255), (0, 255, 0), (255, 255, 0), (255, 0, 0), (0, 255, 255), (255, 0, 255), (50, 50, 50)]),
         _ => Palette {
-            name: "Neon Purple", primary: PRIMARY, background: BACKGROUND, text: TEXT, muted: MUTED,
+            name: "Neon Blue", primary: PRIMARY, background: BACKGROUND, text: TEXT, muted: MUTED,
             border: BORDER, success: SUCCESS, warning: WARNING, danger: DANGER, info: INFO, purple: PURPLE, highlight_bg: HIGHLIGHT_BG,
         },
     }
