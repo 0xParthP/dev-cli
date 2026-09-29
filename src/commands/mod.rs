@@ -9,6 +9,7 @@
 //! - [`ide`] — IDE management (`dev ide`)
 //! - [`project`] — Project management (`dev project`)
 
+pub mod clone;
 pub mod config;
 pub mod ide;
 pub mod project;
