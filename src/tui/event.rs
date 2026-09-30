@@ -29,6 +29,9 @@ where
         }
     }
 
+    // Pump the background clone task channels every tick.
+    state.tick_clone_task();
+
     Ok(())
 }
 
@@ -55,7 +58,11 @@ where
 {
     match key.code {
         KeyCode::Esc => {
-            if state.active_tab == Tab::Ide && state.ide_tab_focus == IdeTabFocus::ConfirmDelete {
+            if state.is_clone_form_active() {
+                state.close_clone_modal();
+            } else if state.active_tab == Tab::Ide
+                && state.ide_tab_focus == IdeTabFocus::ConfirmDelete
+            {
                 state.cancel_delete_custom_ide();
             } else if !state.search_query.is_empty() {
                 state.clear_search();
@@ -66,6 +73,11 @@ where
         }
         KeyCode::F(1) => {
             let _ = state.refresh();
+        }
+        KeyCode::F(2) => {
+            if state.active_tab == Tab::Projects {
+                state.open_clone_modal();
+            }
         }
         KeyCode::Tab => match state.active_tab {
             Tab::Projects | Tab::Recent => state.cycle_selected_ide(),
@@ -146,9 +158,9 @@ where
                 state.push_char(c);
                 state.clamp_selection();
             }
+            Tab::Recent => {}
             Tab::Ide => handle_ide_tab_char(c, state),
             Tab::Settings => handle_settings_tab_char(c, state),
-            _ => {}
         },
 
         _ => {}
@@ -257,6 +269,26 @@ fn handle_settings_tab_char(c: char, state: &mut AppState) {
 
 /// Handle keys in Editing mode (form input).
 fn handle_editing_key(key: KeyEvent, state: &mut AppState) {
+    if state.is_clone_form_active() {
+        match key.code {
+            KeyCode::Esc => state.close_clone_modal(),
+            KeyCode::Enter => {
+                if let Err(msg) = state.submit_clone() {
+                    state.clone_status_message = Some(format!("✗ {msg}"));
+                }
+            }
+            KeyCode::Tab | KeyCode::Down => state.cycle_clone_field(),
+            KeyCode::BackTab | KeyCode::Up => state.cycle_clone_field_backwards(),
+            KeyCode::Left => state.clone_move_left(),
+            KeyCode::Right => state.clone_move_right(),
+            KeyCode::Backspace => state.clone_pop_char(),
+            KeyCode::Delete => state.clone_delete_char(),
+            KeyCode::Char(c) => state.clone_push_char(c),
+            _ => {}
+        }
+        return;
+    }
+
     match key.code {
         KeyCode::Esc => {
             // Cancel editing and return to Normal mode.

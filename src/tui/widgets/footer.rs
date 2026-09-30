@@ -27,6 +27,16 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState, palette: Palette)
 
 /// Build the footer line based on the active tab and input mode.
 fn build_footer_line(state: &AppState, palette: Palette) -> Line<'static> {
+    if state.is_clone_form_active() {
+        return Line::from(vec![
+            Span::styled("Tab", Style::default().fg(palette.primary)),
+            Span::raw(" Next Field  "),
+            Span::styled("↵ Submit", Style::default().fg(palette.success)),
+            Span::raw("  "),
+            Span::styled("Esc Cancel", Style::default().fg(palette.danger)),
+        ]);
+    }
+
     if state.input_mode == InputMode::Editing {
         return match state.active_tab {
             Tab::Ide => Line::from(vec![
@@ -56,6 +66,8 @@ fn build_footer_line(state: &AppState, palette: Palette) -> Line<'static> {
             Span::styled("/ Search", Style::default().fg(palette.warning)),
             Span::raw("  "),
             Span::styled("F1 Refresh", Style::default().fg(palette.purple)),
+            Span::raw("  "),
+            Span::styled("F2 Clone", Style::default().fg(palette.success)),
             Span::raw("  "),
             Span::styled("Esc Quit", Style::default().fg(palette.danger)),
         ]),
