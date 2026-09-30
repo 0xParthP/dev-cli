@@ -250,3 +250,89 @@ pub fn execute(args: CloneArgs) -> Result<()> {
     println!("Successfully cloned into {}", target_path.display());
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_extract_repo_name() {
+        assert_eq!(extract_repo_name("https://github.com/user/my-repo.git"), "my-repo");
+        assert_eq!(extract_repo_name("git@github.com:user/another-repo.git"), "another-repo");
+        assert_eq!(extract_repo_name("https://example.com/simple"), "simple");
+        assert_eq!(extract_repo_name("repo.git"), "repo");
+        assert_eq!(extract_repo_name("https://example.com/"), "example.com");
+        assert_eq!(extract_repo_name("///"), "repository");
+        assert_eq!(extract_repo_name(""), "repository");
+    }
+
+    #[test]
+    fn test_strip_ansi() {
+        let text = "\x1b[31mError Message\x1b[0m";
+        assert_eq!(strip_ansi(text), "Error Message");
+
+        let cr_text = "Progress: 50%\rProgress: 100%";
+        assert_eq!(strip_ansi(cr_text), "Progress: 50%\nProgress: 100%");
+    }
+
+    #[test]
+    fn test_clone_repository_and_streamed_local() {
+        let temp = TempDir::new().unwrap();
+        let source = temp.path().join("source");
+        std::fs::create_dir_all(&source).unwrap();
+
+        let status =
+            Command::new("git").args(["init", &source.to_string_lossy()]).output().unwrap();
+        assert!(status.status.success());
+
+        let _ = Command::new("git")
+            .args(["-C", &source.to_string_lossy(), "config", "user.name", "Test"])
+            .output();
+        let _ = Command::new("git")
+            .args(["-C", &source.to_string_lossy(), "config", "user.email", "test@test.com"])
+            .output();
+        std::fs::write(source.join("file.txt"), "hello").unwrap();
+        let _ = Command::new("git").args(["-C", &source.to_string_lossy(), "add", "."]).output();
+        let _ = Command::new("git")
+            .args(["-C", &source.to_string_lossy(), "commit", "-m", "initial"])
+            .output();
+
+        let target_root = temp.path().join("roots");
+
+        // Test non-streamed clone
+        let cloned =
+            clone_repository(&source.to_string_lossy(), &target_root, Some("custom_name"), false)
+                .unwrap();
+        assert!(cloned.exists());
+        assert_eq!(cloned.file_name().unwrap(), "custom_name");
+
+        // Test streamed clone
+        let channels = clone_repository_streamed(
+            source.to_string_lossy().to_string(),
+            target_root.clone(),
+            Some("streamed_name".to_string()),
+        );
+
+        let res = channels.done_rx.recv().unwrap();
+        assert!(res.is_ok());
+        let streamed_path = res.unwrap();
+        assert!(streamed_path.exists());
+        assert_eq!(streamed_path.file_name().unwrap(), "streamed_name");
+    }
+
+    #[test]
+    fn test_clone_repository_streamed_failure() {
+        let temp = TempDir::new().unwrap();
+        let target_root = temp.path().join("roots");
+
+        let channels = clone_repository_streamed(
+            "https://invalid-url-that-does-not-exist-12345.com/repo.git".to_string(),
+            target_root,
+            None,
+        );
+
+        let res = channels.done_rx.recv().unwrap();
+        assert!(res.is_err());
+    }
+}
